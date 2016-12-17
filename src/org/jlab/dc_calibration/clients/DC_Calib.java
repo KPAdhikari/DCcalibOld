@@ -561,6 +561,7 @@ public class DC_Calib extends WindowAdapter implements WindowListener, ActionLis
 		} while (!input.endsWith("\n") && !input.endsWith("\r\n") && !quit);
 		return input;
 	}
+       
 
 	// private void initMenu() {
 	// JMenuBar bar = new JMenuBar();
