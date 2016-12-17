@@ -25,6 +25,7 @@ import java.awt.GridLayout;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
@@ -38,6 +39,7 @@ import javax.swing.Action;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
+import javax.swing.ButtonGroup;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
@@ -45,6 +47,7 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
+import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.KeyStroke;
@@ -61,7 +64,11 @@ public class DC_Calib extends WindowAdapter implements WindowListener, ActionLis
 
 	private JFrame frame;
 	private JTextArea textArea;
-
+        
+        static String linearFit = "Linear Fit";
+        static String nonLinearFit = "Non-linear Fit";
+        private boolean isLinearFit;
+        
 	protected Thread reader, reader2;
 	private boolean quit;
 
@@ -75,9 +82,9 @@ public class DC_Calib extends WindowAdapter implements WindowListener, ActionLis
 	// Banner
 	private JLabel banner;
 	// JPanels to be used
-	private JPanel bannerPanel, panelForWelcomeAndOpenFile, panelForFileOpen, panelImg, centerPanel;
+	private JPanel bannerPanel, panelForWelcomeAndOpenFile, panelForVariousControls, panelImg, centerPanel;
 	private int gridSize = 1;
-	private JPanel buttonPanel;
+	private JPanel buttonPanel, radioPanel;       
 	// a file chooser to be used to open file to analyze
 	JFileChooser fc;
 	// file to be read and analyzed
@@ -156,9 +163,12 @@ public class DC_Calib extends WindowAdapter implements WindowListener, ActionLis
 		bannerPanel = new JPanel(new BorderLayout());
 		addToBanner();
 
-		panelForFileOpen = new JPanel(new BorderLayout());
-		panelForFileOpen.setBorder(BorderFactory.createEtchedBorder());
-		addToOpenFilePanel();
+		panelForVariousControls = new JPanel(new BorderLayout());
+		panelForVariousControls.setBorder(BorderFactory.createEtchedBorder());
+                //addToOpenFilePanel(); //Moved below
+                radioPanel = new JPanel(new GridLayout(0, 1));
+                addToRadioPanel();
+		addToOpenFilePanel();//add File-chooser, radio panel etc to the control panel
 
 		panelForWelcomeAndOpenFile = new JPanel(new BorderLayout());
 		addToWelcomePanel();
@@ -173,7 +183,6 @@ public class DC_Calib extends WindowAdapter implements WindowListener, ActionLis
 
 		centerPanel = new JPanel(new BorderLayout());
 		addToCenterPanel();
-
 	}
 
 	private void addToBanner() {
@@ -182,12 +191,13 @@ public class DC_Calib extends WindowAdapter implements WindowListener, ActionLis
 	}
 
 	private void addToOpenFilePanel() {
-		panelForFileOpen.add(bFileChooser, BorderLayout.LINE_START);
+		panelForVariousControls.add(radioPanel, BorderLayout.LINE_START);
+                panelForVariousControls.add(bFileChooser, BorderLayout.CENTER);
 	}
 
 	private void addToWelcomePanel() {
 		panelForWelcomeAndOpenFile.add(bannerPanel, BorderLayout.NORTH);
-		panelForWelcomeAndOpenFile.add(panelForFileOpen, BorderLayout.SOUTH);
+		panelForWelcomeAndOpenFile.add(panelForVariousControls, BorderLayout.SOUTH);
 	}
 
 	private void addToPanelImage() {
@@ -298,7 +308,56 @@ public class DC_Calib extends WindowAdapter implements WindowListener, ActionLis
             component.requestFocusInWindow();
         }
 }        
+    
+
+    private void addToRadioPanel() {
+        //super(new BorderLayout());
+
+        //Create the radio buttons.    
+        //JRadioButton pigButton = new JRadioButton(pigString);
+        //pigButton.setMnemonic(KeyEvent.VK_P);
+        //pigButton.setActionCommand(pigString);
+
+        JRadioButton linearFitButton = new JRadioButton(linearFit);
+        //linearFitButton.setMnemonic(KeyEvent.VK_L);
+        linearFitButton.setActionCommand(linearFit);
+        JRadioButton nonLinearFitButton = new JRadioButton(nonLinearFit);
+        //nonLinearFitButton.setMnemonic(KeyEvent.VK_N);
+        nonLinearFitButton.setActionCommand(nonLinearFit);
         
+        //kp: If not grouped, more than one (even all buttons can be selected simulataneously)
+        //Group the radio buttons.
+        ButtonGroup group = new ButtonGroup();        
+        group.add(linearFitButton);
+        group.add(nonLinearFitButton);
+        
+        //Register a listener for the radio buttons.        
+        //linearFitButton.addActionListener(this);
+        linearFitButton.addActionListener(new ActionListener() {
+                        @Override
+			public void actionPerformed(ActionEvent e) {
+                            isLinearFit = true;
+                            System.out.println("Linear-Fit selected");
+                            addListeners();
+                        }
+            }
+        );
+        nonLinearFitButton.addActionListener(new ActionListener() {
+                        @Override
+			public void actionPerformed(ActionEvent e) {
+                            isLinearFit = false;
+                            System.out.println("Non-Linear-Fit selected");
+                            addListeners();
+                        }
+            }
+        );
+ 
+        //Put the radio buttons in a column in a panel.
+        //JPanel radioPanel = new JPanel(new GridLayout(0, 1));
+        radioPanel.add(linearFitButton);
+        radioPanel.add(nonLinearFitButton);
+        //panelForFileOpen.add(radioPanel, BorderLayout.CENTER);        
+    }    
 	private void initFrame() {
 
 		frame.getContentPane().setLayout(new BorderLayout());
@@ -307,12 +366,18 @@ public class DC_Calib extends WindowAdapter implements WindowListener, ActionLis
 		frame.getContentPane().add(buttonClear, BorderLayout.SOUTH);
 		frame.setVisible(true);
 
-		addListeners();
+		//addListeners(); //Now placed inside the listners for buttons for linear/non-linear fits
 
 	}
-
+        
+        /**
+         * This listner is to trigger the time-to-distance fitter.
+         * This sits inside the listener for the file-chooser because until we
+         * choose the files to process, the fitter cannot proceed.
+         * 
+         */
 	private void addListeners() {
-
+                System.out.println("isLinearFit = " + isLinearFit);
 		bFileChooser.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -324,8 +389,7 @@ public class DC_Calib extends WindowAdapter implements WindowListener, ActionLis
 						System.exit(1);
 					}
 					
-                                        TimeToDistanceFitter e3 = new TimeToDistanceFitter(OA, fileArray, true);//Linear fit
-					//TimeToDistanceFitter e3 = new TimeToDistanceFitter(OA, fileArray, false); //Nonlinear fit
+                                        TimeToDistanceFitter e3 = new TimeToDistanceFitter(OA, fileArray, isLinearFit);
 					bTimeToDistance.addActionListener(ee -> {
 						new Thread(e3).start();
 					});
