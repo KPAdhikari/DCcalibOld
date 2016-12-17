@@ -34,6 +34,7 @@ import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import javax.swing.Action;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -43,10 +44,15 @@ import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
+import javax.swing.KeyStroke;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.text.DefaultCaret;
+import javax.swing.text.DefaultEditorKit;
+import javax.swing.text.JTextComponent;
+import javax.swing.text.TextAction;
 
 import org.jlab.dc_calibration.domain.OrderOfAction;
 import org.jlab.dc_calibration.domain.TimeToDistanceFitter;
@@ -221,6 +227,8 @@ public class DC_Calib extends WindowAdapter implements WindowListener, ActionLis
 		int width = (int) (frameSize.width);
 		int height = (int) (frameSize.height);
 		addToTextArea();
+                AddEditOptionsMenu();
+                
 		JScrollPane images = new JScrollPane(panelImg);
 		images.setPreferredSize(new Dimension((int) (width / 3.5), (int) (height / 3.5)));
 		centerPanel.add(images, BorderLayout.WEST);
@@ -244,6 +252,53 @@ public class DC_Calib extends WindowAdapter implements WindowListener, ActionLis
 		caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
 	}
 
+    /**
+     * This method is for making the textfield popup an edit menu
+     * with copy, paste capability when right-clicked on it.
+     * @param 
+     * @return Nothing
+     * @exception No exception
+     * @see Nothing
+     */    
+    private void AddEditOptionsMenu() {
+
+        JPopupMenu menu = new JPopupMenu();
+        Action cut = new DefaultEditorKit.CutAction();
+        cut.putValue(Action.NAME, "Cut");
+        cut.putValue(Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke("control X"));
+        menu.add(cut);
+
+        Action copy = new DefaultEditorKit.CopyAction();
+        copy.putValue(Action.NAME, "Copy");
+        copy.putValue(Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke("control C"));
+        menu.add(copy);
+
+        Action paste = new DefaultEditorKit.PasteAction();
+        paste.putValue(Action.NAME, "Paste");
+        paste.putValue(Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke("control V"));
+        menu.add(paste);
+
+        //Action selectAll = new DefaultEditorKit.selectAllAction(); //kp: doesn't work
+        Action selectAll = new SelectAll(); //kp: See this local clas defined below.       
+        menu.add(selectAll);
+
+        textArea.setComponentPopupMenu(menu);
+    }
+
+    static class SelectAll extends TextAction {
+
+        public SelectAll() {
+            super("Select All");
+            putValue(Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke("control A"));//kp:("control S"));
+        }
+
+        public void actionPerformed(ActionEvent e) {
+            JTextComponent component = getFocusedComponent();
+            component.selectAll();
+            component.requestFocusInWindow();
+        }
+}        
+        
 	private void initFrame() {
 
 		frame.getContentPane().setLayout(new BorderLayout());
