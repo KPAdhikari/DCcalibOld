@@ -12,6 +12,7 @@
 */
 package org.jlab.dc_calibration.domain;
 
+import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -97,6 +98,18 @@ public class Coordinate {
 		c1.cd(3);
 		c1.draw(trial.get(new Coordinate(1, 1, 1)));
 
+                Integer[] array = new Integer [3];
+                System.out.println("Array   Coordinate.hashcode()     Array.hashcode(Array)");
+                for(int i=0; i<6; i++){
+                    for(int j=0; j<6; j++){
+                        for(int k=0; k<6; k++){
+                            array[0] = i; array[1] = j; array[2] = k;
+                            System.out.println("[" + i + ", " + j+ ", " + k + "]" 
+                                        + " " + new Coordinate(i,j,k).hashCode() 
+                                        + " " + Arrays.hashCode(array));
+                        }
+                    }
+                }
 	}
 
 }

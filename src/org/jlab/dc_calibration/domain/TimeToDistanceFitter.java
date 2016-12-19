@@ -39,6 +39,7 @@ import org.freehep.math.minuit.MnMigrad;
 import org.freehep.math.minuit.MnStrategy;
 import org.freehep.math.minuit.MnUserParameters;
 import static org.jlab.dc_calibration.domain.Constants.nSectors;
+import static org.jlab.dc_calibration.domain.Constants.timeAxisMax;
 import org.jlab.groot.base.TStyle;
 import org.jlab.groot.data.GraphErrors;
 import org.jlab.groot.data.H1F;
@@ -271,7 +272,8 @@ public class TimeToDistanceFitter implements ActionListener, Runnable {
             for (int j = 0; j < 2; j++) { // 2 theta bins +/-1 deg around 0 and
                 // 30 deg
                 hNm = String.format("timeVtrkDocaS%dTh%02d", i, j);
-                h2timeVtrkDoca.put(new Coordinate(i, j), new H2F(hNm, 200, 0.0, 1.0, 150, 0.0, 200.0));
+                //h2timeVtrkDoca.put(new Coordinate(i, j), new H2F(hNm, 200, 0.0, 1.0, 150, 0.0, 200.0));
+                h2timeVtrkDoca.put(new Coordinate(i, j), new H2F(hNm, 200, 0.0, 1.0, 150, 0.0, timeAxisMax[i]));
 
                 hTtl = String.format("time vs |trkDoca| (SL=%d, th=%02d+/-1.0)", i + 1, thetaBins[j]);
                 h2timeVtrkDoca.get(new Coordinate(i, j)).setTitle(hTtl);
@@ -283,7 +285,8 @@ public class TimeToDistanceFitter implements ActionListener, Runnable {
                     // deg around 0, 10, 20, 30,
                     // 40, and 50 degs
                     hNm = String.format("Sector %d timeVtrkDocaS%dTh%02d", i, j, k);
-                    h2timeVtrkDocaVZ.put(new Coordinate(i, j, k), new H2F(hNm, 200, 0.0, 1.0, 150, 0.0, 200.0));
+                    //h2timeVtrkDocaVZ.put(new Coordinate(i, j, k), new H2F(hNm, 200, 0.0, 1.0, 150, 0.0, 200.0));
+                    h2timeVtrkDocaVZ.put(new Coordinate(i, j, k), new H2F(hNm, 200, 0.0, 1.0, 150, 0.0, timeAxisMax[i]));
 
                     hTtl = String.format("time vs. Doca (SL=%d, th(%2.1f,%2.1f))", j + 1, thEdgeVzL[k], thEdgeVzH[k]); // Worked
                     h2timeVtrkDocaVZ.get(new Coordinate(i, j, k)).setTitle(hTtl);

@@ -40,12 +40,17 @@ import org.jlab.groot.graphics.EmbeddedCanvas;
 import org.jlab.io.evio.EvioDataBank;
 import org.jlab.io.evio.EvioDataChain;
 import org.jlab.io.evio.EvioDataEvent;
+import static java.lang.Math.abs;
+import java.util.ArrayList;
+import org.jlab.dc_calibration.domain.DCTabbedPane;
+import org.jlab.dc_calibration.domain.OrderOfAction;
+import org.jlab.groot.graphics.EmbeddedPad;
 
 /**
  *
  * @author KPAdhikari
  */
-public class ReadRecDataForMinuit implements ActionListener {
+public class ReadRecDataForMinuitNewFileOldWay implements Runnable{
 	int eventNr;
 	// static boolean debug = false; // for debugging
 	static int debug = -1;// 0; // for debugging
@@ -54,13 +59,15 @@ public class ReadRecDataForMinuit implements ActionListener {
 	static long printEventNr = 20000; // display progress
 
 	// Global variables accessible from other classes as well
-	public static final int nSupLayers = 2;
+        public static final int nSectors = 6;
+	public static final int nSuplayers = 6;
 	public static final int nThBinsVz = 6; // [nThBinsVZ][2]
 	// double thEdgeVz[][] = { {-2.0, 2.0}, {8.0, 12.0}, {18.0, 22.0}, {28.0,
 	// 32.0}, {38.0, 42.0}, {48.0, 52.0}};
 	public static final double[] thEdgeVzL = { -2.0, 8.0, 18.0, 28.0, 38.0, 48.0 };
 	public static final double[] thEdgeVzH = { 2.0, 12.0, 22.0, 32.0, 42.0, 52.0 };
 	public static final double[] wpdist = { 0.3861, 0.4042, 0.6219, 0.6586, 0.9351, 0.9780 };
+        protected static final double timeAxisMax[] = {180.0, 200.0, 320.0, 340.0, 550.0, 580.0};
 	public static final double rad2deg = 180.0 / Math.PI;
 	public static final double deg2rad = Math.PI / 180.0;
 	public static final double cos30 = Math.cos(30.0 / rad2deg);
@@ -70,128 +77,54 @@ public class ReadRecDataForMinuit implements ActionListener {
 	// ===== 8/11/16
 	public static final int nFreePars = 5;
 	public static final String parName[] = { "v0", "deltamn", "tmax1", "tmax2", "distbeta" };
-	public static double prevFitPars[] = { 62.92e-04, 1.35, 137.67, 148.02, 0.055 };// Later
-																					// it
-																					// will
-																					// be
-																					// read
-																					// from
-																					// a
-																					// results
-																					// file
-																					// from
-																					// prev.
-																					// fit.
-	// ===== 8/11/16
+	public static double prevFitPars[] = { 62.92e-04, 1.35, 137.67, 148.02, 0.055 };// Later it will be read from a results file from prev. fit
 
 	private int x = 0, y = 0;
-
-	public ReadRecDataForMinuit() {
+        private boolean isLinearFit;
+        private ArrayList<String> fileArray;
+        private EvioDataChain reader;
+        private OrderOfAction OAInstance;
+        //private DCTabbedPane dcTabbedPane;
+	public ReadRecDataForMinuitNewFileOldWay() {
 		this.x = 3;
 		this.y = 5;// Just for a quick test
 	}
 
-	public void actionPerformed(ActionEvent ev) {
-		/*
-		 * //label2.setText("Label2: This time you can see more words here.");
-		 * if (y == 0) {
-		 * label.setText("Label2: This time you can see more words here."); y =
-		 * 1; } else if (y == 1) { label.setText(""); y = 0; }
-		 */
-		String myMessage = null;
-		myMessage = String.format("Hello from Dialog inside TestEvent class!! x=%d, y=%d", x, y);
-
-		JFrame frame = new JFrame("JOptionPane showMessageDialog example1");
-
-		// show a joptionpane dialog using showMessageDialog
-		// JOptionPane.showMessageDialog(frame, myMessage);
-		JOptionPane.showMessageDialog(frame, "Click OK to start reading the reconstructed file ...");
-		try {
-			processData();
-		} catch (IOException ex) {
-			Logger.getLogger(ReadRecDataForMinuit.class.getName()).log(Level.SEVERE, null, ex);
-		}
-	}
-
+        
+        public ReadRecDataForMinuitNewFileOldWay(OrderOfAction OAInstance, ArrayList<String> files, boolean isLinearFit) {
+            this.fileArray = files;
+            this.OAInstance = OAInstance;
+            this.reader = new EvioDataChain();
+            //this.dcTabbedPane = new DCTabbedPane("PooperDooper");
+            this.isLinearFit = isLinearFit;
+        }
+                
 	public void processData() throws IOException {
 		long printEvent;
-		if (debug == 1) {
-			printEvent = 1;
-		} else {
-			printEvent = printEventNr;
-		}
 
 		int inFileNum = 1;
 		String inputFile = null;
 		String fDir = "/Volumes/Mac_Storage/Work_Codes/CLAS12/DC_Calibration/data/";
-		String fName = "reconstructedDataR128T0corT2DfromCCDBvarFit08.1.evio";
-		EvioDataChain reader = new EvioDataChain();
-		// for (String inputFile : inputFiles) {
-		// for (int fN = 0; fN < inFileNum; fN++) {
-		// if (inputFile == null) { break; }
+		String fName = "reconstructedDataR128T0corT2DfromCCDBvarFit08.1.evio"; //Not used anymore, now files come from fileArray
+		//EvioDataChain reader = new EvioDataChain();		
 		inputFile = fDir + fName;
-		reader.addFile(inputFile);
+		//reader.addFile(inputFile);
 		// }
-		reader.open();
-		System.out.println("Opened the input data file (from ReadRecDataIn class) !");
-
-		int counter = 0, NumEv2process = 20, nTBHits = 0;
+		
+                int counter = 0, NumEv2process = 20, nTBHits = 0;
 		EvioDataBank bnkHits = null;
-
-		/////////////// Start of a small test event loop within processData()
-		/////////////// ////////////////
-		// Now loop over all the events
-		while (reader.hasEvent()) {
-			EvioDataEvent event = reader.getNextEvent();
-			boolean tbHits = false;
-			// if(counter<NumEv2process)
-			if (counter < 20) {
-				if (event.hasBank("TimeBasedTrkg::TBHits")) {
-					bnkHits = (EvioDataBank) event.getBank("TimeBasedTrkg::TBHits");
-					tbHits = true;
-					nTBHits = bnkHits.rows();
-					System.out.println("# of hist in this " + counter + "th event = " + nTBHits);
-				}
-			} else
-				break;
-			counter++;
-		}
-
-		/////////////// End of a small test event loop within processData()
-		/////////////// //////////////////
-
-		// System.out.println("Hello world!!! How is it going.!!");
+                int icounter = 0;
+                for (String str : fileArray) {
+                    reader.addFile(str);
+                    System.out.println("Added " + str + "to the EvioDataChain reader.");
+                }
+                reader.open();
+                
+                
+		System.out.println("Opened the input data file (from ReadRecDataIn class) !");
 		System.out.println("Hello world!!! I am a class with name 'readDataInFromReconstructedEvioOutput'!!");
-
 		String txtOp = "TxtOp/opDoca_Time.txt";
 
-		/*
-		 * //if(args.size()<5)//<2) if(args.length<5)//<2) {
-		 * System.out.println("Usage:"); //System.out.println(
-		 * "./bin/run-groovy   thisFile.groovy  inputFile.evio  NumberOfEventsToProcess dataType "
-		 * // + " parNum" + " parValue" + " debug"); System.out.println(
-		 * "./bin/run-groovy   thisFile.groovy  inputFileNameWithout_N.evio HowManyInputFiles NumberOfEventsToProcess dataType debug"
-		 * ); System.out.println(
-		 * "inputFileNameWithout_N.evio: if we have input files input.0.evio, input.1.evio, ..., input.N.evio then"
-		 * ); System.out.println(
-		 * "\t inputFileNameWithout_N.evio=input and  HowManyInputFiles=N");
-		 * System.out.println(
-		 * "To process all events, please give -1 for the last or 3rd argument."
-		 * ); System.out.println("dataType: Cosmic or Gemc");
-		 * //System.out.println(
-		 * "Don't forget to append .png in the image name for opImageNm.");
-		 * System.out.println(
-		 * "If debug==-1, it will turn off printout from each event, to make it run faster."
-		 * ); System.out.println(
-		 * "\t if debug==-2, print the remaining few spiky events.");
-		 * System.out.println(
-		 * "\t if debug==-3, print trkDoca & time info into a text output file "
-		 * + txtOp); return; } //==========10/12/15 String inputFile = args[0];
-		 * int inFileNum = Integer.parseInt(args[1]); int NumEv2process =
-		 * Integer.parseInt(args[2]); String dataType =
-		 * args[3];//outputImageName = args[2]; int debug =
-		 * Integer.parseInt(args[4]); //==========10/12/15
-		 */
 		inFileNum = 1;
 		NumEv2process = 20000;
 		String dataType = "Cosmic";// 10/27/16
@@ -200,15 +133,7 @@ public class ReadRecDataForMinuit implements ActionListener {
 		System.out.println("inFileNum, NumEv2process, dataType, debug: " + inFileNum + " " + NumEv2process + " "
 				+ dataType + " " + debug);
 
-		/*
-		 * inputFile = String.format("%s.0.evio",args[0]); EvioSource reader =
-		 * new EvioSource(); //new EvioReader();
-		 * reader.open(inputFile);//open("myfile.evio"); //==========10/12/15
-		 * int totNumOfEvs = reader.getSize();
-		 * System.out.println("Total and ToBeProcessed Events: "+totNumOfEvs+
-		 * ", " +NumEv2process); if(NumEv2process<1) NumEv2process=totNumOfEvs;
-		 * //==========10/12/15
-		 */
+
 
 		double dMax = 0.0;
 		System.out.print("wpdist[] = {");
@@ -217,24 +142,6 @@ public class ReadRecDataForMinuit implements ActionListener {
 		}
 		System.out.println("}");
 
-		/*
-		 * ========= From Veronique's email dated 4/18/16: ========= The code
-		 * now creates 2 new banks HitBasedTrkg::HBSegmentTrajectory and
-		 * TimeBasedTrkg::TBSegmentTrajectory which contain the following
-		 * columns:
-		 * 
-		 * segmentID --> the ID of the segment on trajectory sector superlayer
-		 * layer --> the layer from 1 to 6 in the superlayer on trajectory
-		 * matchedHitID --> the ID of the hit that is on trajectory (allowing a
-		 * max of 2 cells off) trkDoca --> the track doca at a given layer
-		 * calculated from the trajectory.
-		 * 
-		 * The layer is efficient if matchedHitID is not -1. For a given layer,
-		 * if you fill a histogram hTot with trkDoca for all values of
-		 * matchedHitID and fill a histogram hE with trkDoca for values of
-		 * matchedHitID!=1, and get the ratio of hE to HTot you will get the
-		 * efficiency as a function of trkDoca.
-		 */
 		counter = 0;
 		int counter2 = 0;
 		int id = -1, sector = -1, superlayer = -1, SL = -1, layer = -1, wire = -1, LR = -1, size = -1;// ,
@@ -243,11 +150,7 @@ public class ReadRecDataForMinuit implements ActionListener {
 		double trkDoca = 0.0, NtrkDoca = 0.0, docaMax = 0.0, doca = 0.0, docaNorm = 0.0, time = 0.0, X = 0.0, Z = 0.0,
 				timeResidual = 0.0, docaError = 0.0, fitChisqProb = 0.0;
 		int ID = 0, clusterID = 0;
-		double avgWire = 0.0, fitSlope = 0.0, thDeg = 0.0, thDeg2 = 0.0;// For
-																		// variables
-																		// in
-																		// TBSegments
-																		// bankx
+		double avgWire = 0.0, fitSlope = 0.0, thDeg = 0.0, thDeg2 = 0.0;// For variables in TBSegments bank
 
 		// ka: 5/12/16: I think Veronique's hit-pruning algorithm doesn't allow
 		// more than 12 hits per segment.
@@ -262,16 +165,12 @@ public class ReadRecDataForMinuit implements ActionListener {
 		// ===========================
 		// Arrays to store TBhits bank-variables to access easily to relate to
 		// other banks
-		int[] gLayer = new int[5000], gWire = new int[5000]; // big # not to let
-																// really noisy
-																// events crash
-																// the program
-		double[] gTime = new double[5000], gDoca = new double[5000], gTrkDoca = new double[5000],
-				gTimeRes = new double[5000];
+		int[] gSector = new int[5000], gSL = new int[5000],  // big # not to let really noisy events crash the program
+                    gLayer = new int[5000], gWire = new int[5000];
+		double[] gTime = new double[5000], gDoca = new double[5000], 
+				gTrkDoca = new double[5000], gTimeRes = new double[5000];
 		double[] gX = new double[5000], gZ = new double[5000];
-		int[] gSegmClustID = new int[50000]; // allowing for a maximum of 50
-												// segments in an event, noticed
-												// cluster ID as big as 10001
+		int[] gSegmClustID = new int[50000]; // allowing for a maximum of 50 segments in an event, noticed cluster ID as big as 10001
 		double[] gSegmAvgWire = new double[50000], gFitChisqProb = new double[50000], gSegmTh = new double[50000];
 		int[] gSegmThBin = new int[50000];
 
@@ -279,7 +178,7 @@ public class ReadRecDataForMinuit implements ActionListener {
 		TStyle.createAttributes(); // TStyle.setFrameFillColor(215,235,245);//TStyle.setFrameFillColor(160,215,230);
 		// TStyle.setAxisFont("Helvetica",24);//TStyle.setAxisColor(255,255,255);
 
-		int nSL = 2, nLayer = 6;
+		int nSL = nSuplayers, nLayer = 6;
 		// ============= 4/18/16 ============= trkDoca histos for each layer in
 		// a superlayer (so 6*2 histos)
 		double[] docaBins = { -0.8, -0.6, -0.4, -0.2, -0.0, 0.2, 0.4, 0.6, 0.8 };
@@ -306,12 +205,12 @@ public class ReadRecDataForMinuit implements ActionListener {
 
 		H1F[] h1ThSL = new H1F[nSL];
 		int thBn = -1, thBnVz = -1;
-		h1ThSL[0] = new H1F("thetaSL1", 120, -60.0, 60.0);
-		h1ThSL[0].setTitle("#theta");
-		h1ThSL[0].setLineColor(1);
-		h1ThSL[1] = new H1F("thetaSL2", 120, -60.0, 60.0);
-		h1ThSL[1].setTitle("#theta");
-		h1ThSL[1].setLineColor(2);
+                String hName;		
+                for (int i=0; i<nSL; i++) {
+                    hName = "thetaSL"+i+1; h1ThSL[i] = new H1F(hName, 120, -60.0, 60.0); 
+                    h1ThSL[i].setTitle("#theta"); h1ThSL[i].setLineColor(i+1);
+                }
+                
 		// int nTh=9; def
 		// thBins=[-60.0,-40.0,-20.0,-10.0,-1.0,1.0,10.0,20.0,40.0,60.0] as
 		// double[];
@@ -328,124 +227,6 @@ public class ReadRecDataForMinuit implements ActionListener {
 			}
 		}
 
-		// Histograms to get ineff. as fn of trkDoca (NtrkDoca =
-		// trkDoca/docaMax)
-		H1F[][] h1trkDoca2Dar = new H1F[nSL][3], h1NtrkDoca2Dar = new H1F[nSL][3], h1NtrkDocaP2Dar = new H1F[nSL][3];// [3]
-																														// for
-																														// all
-																														// good
-																														// hits,
-																														// only
-																														// bad
-																														// (matchedHitID==-1),
-																														// and
-																														// ratio
-		H1F[][][] h1trkDoca3Dar = new H1F[nSL][nLayer][3], h1NtrkDoca3Dar = new H1F[nSL][nLayer][3],
-				h1NtrkDocaP3Dar = new H1F[nSL][nLayer][3];// [3] for all good
-															// hits, only bad
-															// (matchedHitID==-1),
-															// and ratio
-		H1F[][][][] h1trkDoca4Dar = new H1F[nSL][nLayer][nTh][3];// [3] for all
-																	// good
-																	// hits,
-																	// only bad
-																	// (matchedHitID==-1),
-																	// and ratio
-		H1F[][][][] h1wire4Dar = new H1F[nSL][nLayer][nTh][2], h1avgWire4Dar = new H1F[nSL][nLayer][nTh][2];// no
-																											// ratio
-																											// here
-		H1F[][][][] h1fitChisqProbSeg4Dar = new H1F[nSL][nLayer][nTh][2];// no
-																			// ratio
-																			// here
-		String[] hType = { "all hits", "matchedHitID==-1", "Ratio==Ineff." };// as
-																				// String[];
-
-		for (int i = 0; i < nSL; i++) {
-			for (int k = 0; k < 3; k++) { // These are for histos integrated
-											// over all layers
-				hNm = String.format("trkDocaS%dH%d", i + 1, k);
-				h1trkDoca2Dar[i][k] = new H1F(hNm, 90, -0.9, 0.9);
-				hNm = String.format("NtrkDocaS%dH%d", i + 1, k);
-				h1NtrkDoca2Dar[i][k] = new H1F(hNm, 120, -1.2, 1.2);
-				hNm = String.format("NtrkDocaPS%dH%d", i + 1, k);
-				h1NtrkDocaP2Dar[i][k] = new H1F(hNm, 120, 0.0, 1.2);
-				if (k == 0)
-					hTtl = String.format("all hits (SL=%d)", i + 1);
-				if (k == 1)
-					hTtl = String.format("matchedHitID==-1 (SL=%d)", i + 1);
-				if (k == 2)
-					hTtl = String.format("Ineff. (SL=%d)", i + 1);
-				h1trkDoca2Dar[i][k].setTitle(hTtl);
-				h1trkDoca2Dar[i][k].setLineColor(i + 1);
-				h1NtrkDoca2Dar[i][k].setTitle(hTtl);
-				h1NtrkDoca2Dar[i][k].setLineColor(i + 1);
-				h1NtrkDocaP2Dar[i][k].setTitle(hTtl);
-				h1NtrkDocaP2Dar[i][k].setLineColor(i + 1);
-			}
-			for (int j = 0; j < nLayer; j++) {
-				for (int k = 0; k < 3; k++) { // These are for histos integrated
-												// over all theta
-					hNm = String.format("trkDocaS%dL%dH%d", i + 1, j + 1, k);
-					h1trkDoca3Dar[i][j][k] = new H1F(hNm, 90, -0.9, 0.9);
-					hNm = String.format("NtrkDocaS%dL%dH%d", i + 1, j + 1, k);
-					h1NtrkDoca3Dar[i][j][k] = new H1F(hNm, 120, -1.2, 1.2);
-					hNm = String.format("NtrkDocaPS%dL%dH%d", i + 1, j + 1, k);
-					h1NtrkDocaP3Dar[i][j][k] = new H1F(hNm, 120, 0.0, 1.2);
-					if (k == 0)
-						hTtl = String.format("all hits (SL=%d, Layer%d)", i + 1, j + 1);
-					if (k == 1)
-						hTtl = String.format("matchedHitID==-1 (SL=%d, Layer%d)", i + 1, j + 1);
-					if (k == 2)
-						hTtl = String.format("Ineff. (SL=%d, Layer%d)", i + 1, j + 1);
-					h1trkDoca3Dar[i][j][k].setTitle(hTtl);
-					h1trkDoca3Dar[i][j][k].setLineColor(i + 1);
-					h1NtrkDoca3Dar[i][j][k].setTitle(hTtl);
-					h1NtrkDoca3Dar[i][j][k].setLineColor(i + 1);
-					h1NtrkDocaP3Dar[i][j][k].setTitle(hTtl);
-					h1NtrkDocaP3Dar[i][j][k].setLineColor(i + 1);
-				}
-
-				for (int th = 0; th < nTh; th++) {
-					for (int k = 0; k < 3; k++) {
-						hNm = String.format("trkDocaS%dL%dTh%02dH%d", i + 1, j + 1, th, k);
-						h1trkDoca4Dar[i][j][th][k] = new H1F(hNm, 90, -0.9, 0.9);
-
-						if (k == 0)
-							hTtl = String.format("all hits (SL=%d, Layer%d, th(%.1f,%.1f))", i + 1, j + 1, thBins[th],
-									thBins[th + 1]);
-						if (k == 1)
-							hTtl = String.format("matchedHitID==-1 (SL=%d, Layer%d, th(%.1f,%.1f))", i + 1, j + 1,
-									thBins[th], thBins[th + 1]);
-						if (k == 2)
-							hTtl = String.format("Ineff. (SL=%d, Layer%d, th(%.1f,%.1f))", i + 1, j + 1, thBins[th],
-									thBins[th + 1]);
-						h1trkDoca4Dar[i][j][th][k].setTitle(hTtl);
-						h1trkDoca4Dar[i][j][th][k].setLineColor(i + 1);
-					}
-					for (int k = 0; k < 2; k++) {
-						hNm = String.format("wireS%dL%dTh%02dH%d", i + 1, j + 1, th, k);
-						h1wire4Dar[i][j][th][k] = new H1F(hNm, 120, -1.0, 119.0);
-						hTtl = String.format("wire # for %s (SL=%d, Lay%d, th(%.1f,%.1f))", hType[k], i + 1, j + 1,
-								thBins[th], thBins[th + 1]);
-						h1wire4Dar[i][j][th][k].setTitle(hTtl);
-						h1wire4Dar[i][j][th][k].setLineColor(i + 1);
-						hNm = String.format("avgWireS%dL%dTh%02dH%d", i + 1, j + 1, th, k);
-						h1avgWire4Dar[i][j][th][k] = new H1F(hNm, 120, -1.0, 119.0);
-						hTtl = String.format("avgWire(SegBnk) for %s (SL=%d, Lay%d, th(%.1f,%.1f))", hType[k], i + 1,
-								j + 1, thBins[th], thBins[th + 1]);
-						h1avgWire4Dar[i][j][th][k].setTitle(hTtl);
-						h1avgWire4Dar[i][j][th][k].setLineColor(i + 1);
-						hNm = String.format("fitChisqProbS%dL%dTh%02dH%d", i + 1, j + 1, th, k);
-						h1fitChisqProbSeg4Dar[i][j][th][k] = new H1F(hNm, 90, -0.1, 0.1);
-						hTtl = String.format("fitChisqProbSeg(SegBnk) for %s (SL=%d, Lay%d, th(%.1f,%.1f))", hType[k],
-								i + 1, j + 1, thBins[th], thBins[th + 1]);
-						h1fitChisqProbSeg4Dar[i][j][th][k].setTitle(hTtl);
-						h1fitChisqProbSeg4Dar[i][j][th][k].setLineColor(i + 1);
-					}
-				}
-			}
-		}
-
 		// =============== new Idea from Will Phelps =====
 		H2F[][] h2timeVtrkDoca = new H2F[nSL][2]; // 2 for 2 theta bins 0, 30
 		int[] thetaBins = { 0, 30 };// as int[];
@@ -459,28 +240,22 @@ public class ReadRecDataForMinuit implements ActionListener {
 			}
 		}
 
-		/////// public static final int nThBinsVz = 6; //[nThBinsVZ][2]
-		// double thEdgeVz[][] = { {-2.0, 2.0}, {8.0, 12.0}, {18.0, 22.0},
-		/////// {28.0, 32.0}, {38.0, 42.0}, {48.0, 52.0}};
-		/////// public static final double thEdgeVzL[] = { -2.0, 8.0, 18.0,
-		/////// 28.0, 38.0, 48.0};
-		/////// public static final double thEdgeVzH[] = { 2.0, 12.0, 22.0,
-		/////// 32.0, 42.0, 52.0};
-		H2F[][] h2timeVtrkDocaVZ = new H2F[nSL][nThBinsVz]; // 2 for 2 theta
-															// bins 0, 30
-		for (int i = 0; i < nSL; i++) {
-			for (int j = 0; j < nThBinsVz; j++) { // nThBinsVZ theta bins +/-2
-													// deg around 0, 10, 20, 30,
-													// 40, and 50 degs
-				hNm = String.format("timeVtrkDocaS%dTh%02d", i, j);
-				h2timeVtrkDocaVZ[i][j] = new H2F(hNm, 200, 0.0, 1.0, 150, 0.0, 200.0);
-				hTtl = String.format("time vs |trkDoca| (SL=%d, th(%2.1f,%2.1f))", i + 1, thEdgeVzL[j], thEdgeVzH[j]); // Worked
-				// hTtl = String.format("time vs |trkDoca| (SL=%d,
-				// th(%2.1f,%2.1f))",i+1,thEdgeVz[0][j],thEdgeVz[1][j]);
-				// //Didn't work
-				h2timeVtrkDocaVZ[i][j].setTitle(hTtl); // h2timeVtrkDoca[i][j].setMarkerColor(2);
+	
+		H2F[][][] h2timeVtrkDocaVZ = new H2F[nSectors][nSL][nThBinsVz]; // 2 for 2 theta bins 0, 30
+		for (int i = 0; i < nSectors; i++) {
+                    for (int j = 0; j < nSL; j++) {
+			for (int k = 0; k < nThBinsVz; k++) { // nThBinsVZ theta bins +/-2 deg around 0, 10, 20, 30, 40, and 50 degs
+				hNm = String.format("timeVtrkDocaS%dSL%dTh%02d", i, j, k);
+				h2timeVtrkDocaVZ[i][j][k] = new H2F(hNm, 200, 0.0, 1.0, 150, 0.0, timeAxisMax[j]);//200.0);
+				//hTtl = String.format("time vs |trkDoca| (S=%d,SL=%d, th(%2.1f,%2.1f))", i + 1, j+1, thEdgeVzL[k], thEdgeVzH[k]); // Worked
+                                hTtl = "Sec="+ (i + 1) + ", SL=" + (j+1) + ", theta=("+ thEdgeVzL[k] + "," + thEdgeVzH[k]+")"; 
+				// hTtl = String.format("time vs |trkDoca| (SL=%d, th(%2.1f,%2.1f))",i+1,thEdgeVz[0][j],thEdgeVz[1][j]); //Didn't work
+				h2timeVtrkDocaVZ[i][j][k].setTitle(hTtl); // h2timeVtrkDoca[i][j].setMarkerColor(2);
+                                h2timeVtrkDocaVZ[i][j][k].setTitleX("doca/docaMax");
+                                h2timeVtrkDocaVZ[i][j][k].setTitleY("time");
 			}
-		}
+                    }
+                }
 
 		double[] pars4FitLine = { prevFitPars[0], prevFitPars[1], prevFitPars[2], prevFitPars[3], prevFitPars[4], 1.0,
 				0.0, 0.3861 };
@@ -506,34 +281,17 @@ public class ReadRecDataForMinuit implements ActionListener {
 			// such as
 			// TxtOp/opDoca_TimeRun128.txt as last arg."); return;}
 			// txtOp = args[5]; //file = new File(txtOp); file.delete();
-			txtOp = "textOutput.txt";
+			txtOp = "src/images/textOutput.txt";
 			file = new File(txtOp); // ("C:/temp/test.txt") //Create a new file
 			if (!file.exists()) {
 				file.createNewFile();
 			} // If file doesn't exist, create a new one.
-			/*
-			 * //fw = new FileWriter(file.getAbsoluteFile()); fw = new
-			 * FileWriter(file); bw = new BufferedWriter(fw);
-			 */
+
 			fos = new FileOutputStream(file);
 			bw = new BufferedWriter(new OutputStreamWriter(fos));
 
-			// writer = file.newWriter; //("C:/temp/test.txt")
-			// file.write "This is the first line\n";//worked
-			// file << "This is the second line\n";//worked
-			// System.out.println file.text;//worked
-			// file << "This is the third line\n";//worked
-			// file <<"SegID SL Layer hitID thetaDeg time_ns trkDoca_cm \n";
-			// file.write("EvNum SegID SL Layer hitID thetaDeg time_ns
-			// trkDoca_cm \n");
-			// file.write("EvNum SegID SL Layer nTBHits nTBCrosses hitID
-			// thetaDeg avgWire fitChisqProb time_ns trkDoca_cm timeResidual
-			// (calc)doca\n");
-			// bw.write("EvNum SegID SL Layer nTBHits nTBCrosses hitID thetaDeg
-			// avgWire fitChisqProb time_ns trkDoca_cm timeResidual
-			// (calc)doca\n");
-			bw.write(
-					"EvNum  SegID   SL   Layer  nTBHits  nTBCrosses   hitID   thetaDeg  avgWire  fitChisqProb  time_ns    trkDoca_cm  timeResidual  (calc)doca\n");
+			bw.write("EvNum  SegID   SL   Layer  nTBHits  nTBCrosses   hitID  thetaDeg  avgWire " 
+                                 + "  fitChisqProb  time_ns    trkDoca_cm  timeResidual  (calc)doca\n");
 			// writer <<"SegID SL Layer hitID thetaDeg time_ns trkDoca_cm \n";
 			// fos.close();
 			bw.close();
@@ -547,13 +305,7 @@ public class ReadRecDataForMinuit implements ActionListener {
 			// by
 			// using the FileWriter(String fileName, boolean append)
 			// constructor.
-			output = new BufferedWriter(new FileWriter(txtOp, true)); // keeps
-																		// previous
-																		// content,
-																		// and
-																		// appends
-																		// new
-																		// line
+			output = new BufferedWriter(new FileWriter(txtOp, true)); // keeps previous content, and appends new line
 			for (int i = 0; i < 4; i++) {
 				output.append("New Line!" + i + "\n");
 			}
@@ -563,7 +315,7 @@ public class ReadRecDataForMinuit implements ActionListener {
 		if (debug == -3)
 			appendIt(txtOp, "Haha ha ...2 \n");
 
-		String outputFile = "/Volumes/Mac_Storage/Work_Codes/GIT_HUB/DC_Calibration/src/images/fitPars_residualInDocaBins_TBhits.txt"
+		String outputFile = "src/images/fitPars_residualInDocaBins_TBhits.txt"
 				+ dataType;
 		String printIt;
 
@@ -573,6 +325,7 @@ public class ReadRecDataForMinuit implements ActionListener {
 		bnkHits = null;
 		EvioDataBank bnkClust = null, bnkSegs = null, bnkSegTrks = null, bnkCross = null;
 
+                System.out.println("Ready to enter the event loop. reader.hasEvent() = " + reader.hasEvent());
 		/////////////// Start of event loop within processData()
 		while (reader.hasEvent()) {
 			EvioDataEvent event = reader.getNextEvent();
@@ -580,25 +333,21 @@ public class ReadRecDataForMinuit implements ActionListener {
 			nTBHits = 0;
 			int nTBClust = 0, nTBSegs = 0, nTBSegTrks = 0, nTBCrosses = 0;
 			int nHitsInSeg = 0;
+                        
 			if (NumEv2process > 0 && counter == NumEv2process)
 				break; // 5/16/16
 
-			// if(counter<NumEv2process)//<5)
+                        
+			//if(counter<50)//<NumEv2process)//
 			if (true) // Replacement for above line to make it work
 			{
 				// event.show(); // print out all banks in the event
-				if (event.hasBank("TimeBasedTrkg::TBHits")) { // bnkHits.show();//printout
-																// the content
-																// of the bank
+				if (event.hasBank("TimeBasedTrkg::TBHits")) { // bnkHits.show();//printout the content of the bank
 					bnkHits = (EvioDataBank) event.getBank("TimeBasedTrkg::TBHits");
 					tbHits = true;
 					nTBHits = bnkHits.rows();
 				}
-				if (event.hasBank("TimeBasedTrkg::TBClusters")) { // bnkHits.show();//printout
-																	// the
-																	// content
-																	// of the
-																	// bank
+				if (event.hasBank("TimeBasedTrkg::TBClusters")) { // bnkHits.show();//printout the content of the bank
 					bnkClust = (EvioDataBank) event.getBank("TimeBasedTrkg::TBClusters");
 					tbClust = true;
 					nTBClust = bnkClust.rows();
@@ -623,9 +372,7 @@ public class ReadRecDataForMinuit implements ActionListener {
 							+ counter + ", " + nTBHits + ", " + nTBClust + ", " + nTBSegs + ", " + nTBSegTrks + ", "
 							+ nTBCrosses);
 
-				// double[] var_TBhits = new double[17]; //var_TBhits[0] =
-				// (double) bank_TBhits.getInt("id",i);
-
+				
 				if (debug > -1)
 					System.out.println("============ Entries from TBHits Bank:============ ");
 				if (debug > -1)
@@ -648,24 +395,16 @@ public class ReadRecDataForMinuit implements ActionListener {
 					timeResAll = new double[nTBHits];
 					docaErrAll = new double[nTBHits];
 					for (int j = 0; j < nTBHits; j++) {
-						id = bnkHits.getInt("id", j);
-						idAll[j] = bnkHits.getInt("id", j);
-						secAll[j] = bnkHits.getInt("sector", j);
-						slAll[j] = bnkHits.getInt("superlayer", j);
-						layAll[j] = bnkHits.getInt("layer", j);
-						wireAll[j] = bnkHits.getInt("wire", j);
-						lrAll[j] = bnkHits.getInt("LR", j);
-						timeAll[j] = bnkHits.getDouble("time", j);
-						docaAll[j] = bnkHits.getDouble("doca", j);
-						trkDocaAll[j] = bnkHits.getDouble("trkDoca", j);
-						xAll[j] = bnkHits.getDouble("X", j);
-						zAll[j] = bnkHits.getDouble("Z", j);
-						clustIDAll[j] = bnkHits.getInt("clusterID", j);
-						timeResAll[j] = bnkHits.getDouble("timeResidual", j);
-						docaErrAll[j] = bnkHits.getDouble("docaError", j);
+						id = bnkHits.getInt("id", j);		      idAll[j] = bnkHits.getInt("id", j);
+						secAll[j] = bnkHits.getInt("sector", j);      slAll[j] = bnkHits.getInt("superlayer", j);
+						layAll[j] = bnkHits.getInt("layer", j);       wireAll[j] = bnkHits.getInt("wire", j);
+						lrAll[j] = bnkHits.getInt("LR", j);           timeAll[j] = bnkHits.getDouble("time", j);
+						docaAll[j] = bnkHits.getDouble("doca", j);    trkDocaAll[j] = bnkHits.getDouble("trkDoca", j);
+						xAll[j] = bnkHits.getDouble("X", j);          zAll[j] = bnkHits.getDouble("Z", j);
+						clustIDAll[j] = bnkHits.getInt("clusterID", j);	   timeResAll[j] = bnkHits.getDouble("timeResidual", j);
+						docaErrAll[j] = bnkHits.getDouble("docaError", j); trkDoca = bnkHits.getDouble("trkDoca", j);
 
-						trkDoca = bnkHits.getDouble("trkDoca", j);
-
+                                                //System.out.println("id sec sl: " + id + ", " + secAll[j] + ", " + slAll[j]);
 						if (debug > -1) {
 							printIt = String.format("%d,%d,%d,%d,%d,%d, %.1f,%.3f,%.3f,%.2f,%.1f, %d,%.1f,%.3f",
 									idAll[j], secAll[j], slAll[j], layAll[j], wireAll[j], lrAll[j], timeAll[j],
@@ -673,45 +412,30 @@ public class ReadRecDataForMinuit implements ActionListener {
 									docaErrAll[j]);
 							System.out.println(printIt);
 						}
-						// For fast access (avoiding multiple loops), I am
-						// indexing quantities with hitID (==id here)
-						gLayer[id] = layAll[j];
-						gWire[id] = wireAll[j];
-						gTime[id] = timeAll[j];
-						gDoca[id] = docaAll[j];
-						gTrkDoca[id] = trkDocaAll[j];
-						gX[id] = xAll[j];
-						gZ[id] = zAll[j];
-						gTimeRes[id] = timeResAll[j];
-						if (debug > -1)
-							System.out.println("trkDoca =" + trkDoca + "  trkDocaAll[j] =" + trkDocaAll[j]
-									+ ",  gTrkDoca[id] = " + gTrkDoca[id]);
+						// For fast access (avoiding multiple loops), I am indexing quantities with hitID (==id here)
+						gSector[id] = secAll[j];  gSL[id] = slAll[j];     gLayer[id] = layAll[j];   gWire[id] = wireAll[j];
+						gTime[id] = timeAll[j];   gDoca[id] = docaAll[j]; gTrkDoca[id] = trkDocaAll[j];	gX[id] = xAll[j]; 
+                                                gZ[id] = zAll[j];         gTimeRes[id] = timeResAll[j];
+						if (debug > -1)	System.out.println("trkDoca =" + trkDoca + "  trkDocaAll[j] =" 
+                                                            + trkDocaAll[j] + ",  gTrkDoca[id] = " + gTrkDoca[id]);
 
 						docaBin = -1;
-						docaBin = (int) ((trkDocaAll[j] - (-0.8)) / 0.2);// bin-range
-																			// and
-																			// width
-																			// (-0.8,0.8),
-																			// 0.2
-						superlayer = slAll[j];
-						layer = layAll[j];
-						if (sector == 1 && (docaBin > -1 && docaBin < 8)) {
-							hArrWire[superlayer - 1][layer - 1][docaBin].fill(wire);
-						}
+						docaBin = (int) ((trkDocaAll[j] - (-0.8)) / 0.2);// bin-range and width (-0.8,0.8), 0.2
+						superlayer = slAll[j]; 	layer = layAll[j];
+						if (sector == 1 && (docaBin > -1 && docaBin < 8)) hArrWire[superlayer - 1][layer - 1][docaBin].fill(wire);
 					}
 				}
 
-				if (debug > -1)
-					System.out.println("============ Entries from TBSegments Bank:============ ");
-				if (debug > -1)
-					System.out.println("SegmID sec SL Hits(1,2,3,4,5,6,7,8,9,10,11,12) ClustID size mySize");
+				if (debug > -1)	System.out.println("============ Entries from TBSegments Bank:============ ");
+				if (debug > -1) System.out.println("SegmID sec SL Hits(1,2,3,4,5,6,7,8,9,10,11,12) ClustID size mySize");
 				if (tbSegs == true) {
 					for (int k = 0; k < bnkSegs.rows(); k++) {
 						nHitsInSeg = 0;
 						ID = bnkSegs.getInt("ID", k);
-						sector = bnkSegTrks.getInt("sector", k);
+						sector = bnkSegs.getInt("sector", k);
 						superlayer = bnkSegs.getInt("superlayer", k);
 						clusterID = bnkSegs.getInt("Cluster_ID", k);
+                                                if(ID> 4500) continue; //12/18/16
 						hitID[0] = bnkSegs.getInt("Hit1_ID", k);
 						hitID[1] = bnkSegs.getInt("Hit2_ID", k);
 						hitID[2] = bnkSegs.getInt("Hit3_ID", k);
@@ -727,66 +451,48 @@ public class ReadRecDataForMinuit implements ActionListener {
 						avgWire = (double) bnkSegs.getDouble("avgWire", k);
 						fitChisqProb = (double) bnkSegs.getDouble("fitChisqProb", k);
 						fitSlope = bnkSegs.getDouble("fitSlope", k);
-						for (int h = 0; h < 12; h++) {
-							if (hitID[h] > -1)
-								nHitsInSeg++;
-						}
-						size = bnkSegTrks.getInt("size", k); // Should be equal
-																// to nHitsInSeg
-																// but for now
-																// (6/10/16) it
-																// is not.
-
+						for (int h = 0; h < 12; h++) {if (hitID[h] > -1) nHitsInSeg++;}
+                                                //for (int h = 0; h < 12; h++) System.out.print(hitID[h] + " "); System.out.println("");
+						size = bnkSegs.getInt("size", k); // Should be equal to nHitsInSeg but for now (6/10/16) it is not
 						thDeg = rad2deg * Math.atan2(fitSlope, 1.0);
 						thDeg2 = rad2deg * Math.atan(fitSlope);
-						thBn = -1;
-						thBnVz = -1;
+						thBn = -1; 	thBnVz = -1;
 						for (int th = 0; th < nTh; th++) {
-							if (thDeg > thBins[th] && thDeg <= thBins[th + 1])
-								thBn = th;
+							if (thDeg > thBins[th] && thDeg <= thBins[th + 1])   thBn = th;
 						}
 						for (int th = 0; th < nThBinsVz; th++) {
-							if (thDeg > thEdgeVzL[th] && thDeg <= thEdgeVzH[th])
-								thBnVz = th;
-						} // 8/31/16
-							// following g-variables (global) to be accessed
-							// from
+							if (thDeg > thEdgeVzL[th] && thDeg <= thEdgeVzH[th]) thBnVz = th;
+						} // 8/31/16 following g-variables (global) to be accessed from
 							// other banks based on segmentID value.
-						if (debug > -1)
-							System.out.println("clusterID=" + clusterID);
+						if (debug > -1) System.out.println("clusterID=" + clusterID + "  ID = " + ID);
 						gSegmClustID[ID] = clusterID;
 						gSegmAvgWire[ID] = avgWire;
 						gFitChisqProb[ID] = fitChisqProb;
 						gSegmTh[ID] = thDeg;
-						gSegmThBin[ID] = thBn;
-
+						gSegmThBin[ID] = thBn;                                                
+                                                //System.out.println("superlayer = " + superlayer);
 						h1ThSL[superlayer - 1].fill(thDeg);
-
-						/*
-						 * if(debug>-1) {
-						 * System.out.println(ID+","+sector+","+superlayer+",");
-						 * for(int h=0;h<12;h++)
-						 * System.out.println(hitID[h]+",");
-						 * System.out.println(clusterID); }
-						 */
-
-						if (debug > -1) {
-							printIt = String.format("%d,%d,%d,%d,%d,  %d,%d,%d,%d,%d,  %d,%d,%d,%d,%d  ,%d,%d,%d", ID,
-									sector, superlayer, hitID[0], hitID[1], hitID[2], hitID[3], hitID[4], hitID[5],
-									hitID[6], hitID[7], hitID[8], hitID[9], hitID[10], hitID[11], clusterID, size,
-									nHitsInSeg);
-							System.out.println(printIt);
+						
+						if (debug > -1) //(true)//
+                                                {
+                                                    System.out.println("event#=" + counter);
+                                                    printIt = String.format("id=%d, s=%d,sl=%d,%d,%d,  %d,%d,%d,%d,%d,  %d,%d,%d,%d,%d  ,%d,%d,%d", ID,
+								sector, superlayer, hitID[0], hitID[1], hitID[2], hitID[3], hitID[4], hitID[5],
+								hitID[6], hitID[7], hitID[8], hitID[9], hitID[10], hitID[11], clusterID, size,nHitsInSeg);
+                                                    printIt = printIt + ", th=" + thDeg; System.out.println(printIt);
+                                                    //kp: 12/18/16 This printing revealed that there are sometimes two fits for the same set of hits, 
+                                                    // making two track segements (with different theta angles). (I guess that was due to difficulty 
+                                                    // with left-right ambiguity resolution)
 						}
 						if (debug > -1)
-							System.out.println(
-									"hitID time thDeg_atan2 thDeg_atan trkDoca (associated hits info from TBhits bank)");
+							System.out.println("hitID time thDeg_atan2 thDeg_atan trkDoca (associated hits info from TBhits bank)");
 						double thTmp1 = thDeg - 0.0, thTmp2 = thDeg - 30.0;
 						docaMax = 2.0 * wpdist[superlayer - 1];
 						docaNorm = trkDoca / docaMax;
 						for (int h = 0; h < 12; h++) {
-							if (nHitsInSeg > 5)// Saving only those with more
-												// than 5 hits
+							if (nHitsInSeg > 5)// Saving only those with more than 5 hits
 							{
+                                                            //System.out.println("Sector = " + sector);
 								if (debug > -1 && hitID[h] > -1) {
 									printIt = String.format("%02d %.1f %.1f %.1f %.1f", hitID[h], gTime[hitID[h]],
 											thDeg, thDeg2, gTrkDoca[hitID[h]]);
@@ -806,193 +512,12 @@ public class ReadRecDataForMinuit implements ActionListener {
 																					// value
 									// if(deltaVal<50.0){ //11/10/16
 									// h2timeVtrkDocaVZ[superlayer-1][thBnVz].fill(abs(gTrkDoca[hitID[h]]),gTime[hitID[h]]);
-									h2timeVtrkDocaVZ[superlayer - 1][thBnVz].fill(abs(docaNorm), gTime[hitID[h]]);
+									h2timeVtrkDocaVZ[sector-1][superlayer - 1][thBnVz].fill(abs(docaNorm), gTime[hitID[h]]);
 									// } //11/10/16
-								}
-								// double thEdgeVzH[] = { 2.0, 12.0, 22.0, 32.0,
-								// 42.0, 52.0};
-								// H2F[][] h2timeVtrkDocaVZ = new
-								// H2F[nSL][nThBinsVz]; //2 for 2 theta bins 0,
-								// 30
-
-								if (debug == -3 && hitID[h] > -1 && gLayer[hitID[h]] > -1)// Printing
-																							// time
-																							// &
-																							// trkDoca
-																							// info
-																							// into
-																							// a
-																							// txt
-																							// o/p
-																							// file
-																							// for
-																							// time-to-distance
-																							// calibration
-								{
-									// printIt = String.format("%d %d %d %d %.1f
-									// %.1f
-									// %.4f\n",ID,superlayer,gLayer[hitID[h]],
-									// printIt = String.format("%d %d %d %d %d
-									// %.1f %.1f %.4f %.1f
-									// %.4f\n",counter,ID,superlayer,gLayer[hitID[h]],//Disabled
-									// on 6/23/16
-									printIt = String.format("%d %d %d %d %d %d %d %.1f %.1f %.4f %.1f %.4f %.4f %.4f\n",
-											counter, ID, superlayer, gLayer[hitID[h]], nTBHits, nTBCrosses, hitID[h],
-											thDeg, avgWire, fitChisqProb, gTime[hitID[h]], gTrkDoca[hitID[h]],
-											gTimeRes[hitID[h]], gDoca[hitID[h]] // 7/19/16//gDoca
-																				// added
-																				// on
-																				// 8/03/16
-									);
-									// file<<printIt;//<<"\n";
-									appendIt(txtOp, printIt);// appendIt(txtOp,"Haha
-																// ha ...2 \n");
-																// //worked
-									// writer<<printIt;//<<"\n";
-								}
+								}								
 							}
 						}
 
-					}
-				}
-
-				if (debug > -1)
-					System.out.println("============ Entries from TBSegmentTrajectory Bank:============ ");
-				if (debug > -1)
-					System.out.println("Entry#,Sec,SL,L,segmentID,matchedHitID trkDoca");
-				if (tbSegTrks == true) {
-					// EvioDataBank bnkSegTrks =
-					// (EvioDataBank)event.getBank("TimeBasedTrkg::TBSegmentTrajectory");
-					for (int i = 0; i < bnkSegTrks.rows(); i++) {
-						// First getting all the values of each variables of the
-						// current bank
-						sector = bnkSegTrks.getInt("sector", i);
-						superlayer = bnkSegTrks.getInt("superlayer", i);
-						layer = bnkSegTrks.getInt("layer", i);
-						segmentID = bnkSegTrks.getInt("segmentID", i);
-						matchedHitID = bnkSegTrks.getInt("matchedHitID", i);
-						trkDoca = bnkSegTrks.getDouble("trkDoca", i);
-						SL = superlayer;
-						dMax = wpdist[SL - 1];
-						NtrkDoca = trkDoca / dMax; // 6/12/16
-
-						// h1trkDoca4Dar= new H1F[nSL][nLayer][nTh][3];
-						// Histos integrated over layer and theta
-						h1trkDoca2Dar[SL - 1][0].fill(trkDoca);
-						h1NtrkDoca2Dar[SL - 1][0].fill(NtrkDoca);
-						h1NtrkDocaP2Dar[SL - 1][0].fill(abs(NtrkDoca));
-						if (matchedHitID == -1) {
-							h1trkDoca2Dar[SL - 1][1].fill(trkDoca);
-							h1NtrkDoca2Dar[SL - 1][1].fill(NtrkDoca);
-							h1NtrkDocaP2Dar[SL - 1][1].fill(abs(NtrkDoca));
-						} // Used only for drawing
-						if (matchedHitID == -1) {
-							h1trkDoca2Dar[SL - 1][2].fill(trkDoca);
-							h1NtrkDoca2Dar[SL - 1][2].fill(NtrkDoca);
-							h1NtrkDocaP2Dar[SL - 1][2].fill(abs(NtrkDoca));
-						} // Will be divided by tot.
-							// Histos divided further into layer bins
-						h1trkDoca3Dar[SL - 1][layer - 1][0].fill(trkDoca);
-						h1NtrkDoca3Dar[SL - 1][layer - 1][0].fill(NtrkDoca);
-						h1NtrkDocaP3Dar[SL - 1][layer - 1][0].fill(abs(NtrkDoca));
-						if (matchedHitID == -1) {
-							h1trkDoca3Dar[SL - 1][layer - 1][1].fill(trkDoca);
-							h1NtrkDoca3Dar[SL - 1][layer - 1][1].fill(NtrkDoca);
-							h1NtrkDocaP3Dar[SL - 1][layer - 1][1].fill(abs(NtrkDoca));
-						} // Used only for drawing
-						if (matchedHitID == -1) {
-							h1trkDoca3Dar[SL - 1][layer - 1][2].fill(trkDoca);
-							h1NtrkDoca3Dar[SL - 1][layer - 1][2].fill(NtrkDoca);
-							h1NtrkDocaP3Dar[SL - 1][layer - 1][2].fill(abs(NtrkDoca));
-						} // Will be divided by tot.
-							// Histos divided further into theta bins
-						if (segmentID > -1 && gSegmThBin[segmentID] > -1) {
-							h1trkDoca4Dar[SL - 1][layer - 1][gSegmThBin[segmentID]][0].fill(trkDoca);
-							if (matchedHitID == -1)
-								h1trkDoca4Dar[SL - 1][layer - 1][gSegmThBin[segmentID]][1].fill(trkDoca);// Used
-																											// only
-																											// for
-																											// drawing
-							if (matchedHitID == -1)
-								h1trkDoca4Dar[SL - 1][layer - 1][gSegmThBin[segmentID]][2].fill(trkDoca);// Will
-																											// be
-																											// divided
-																											// by
-																											// tot.
-
-							// H1F[][][][] h1wire4Dar= new
-							// H1F[nSL][nLayer][nTh][2], h1avgWire4Dar,
-							// h1fitChisqProbSeg4Dar;
-							if (matchedHitID > -1)
-								h1wire4Dar[SL - 1][layer - 1][gSegmThBin[segmentID]][0].fill(gWire[matchedHitID]);// this
-																													// wont
-																													// have
-																													// [][][][1]/[2]
-																													// either
-							h1avgWire4Dar[SL - 1][layer - 1][gSegmThBin[segmentID]][0].fill(gSegmAvgWire[segmentID]);
-							h1fitChisqProbSeg4Dar[SL - 1][layer - 1][gSegmThBin[segmentID]][0]
-									.fill(gFitChisqProb[segmentID]);
-							if (matchedHitID == -1) {
-								// h1wire4Dar[SL-1][layer-1][gSegmThBin[segmentID]][1].fill(gWire[matchedHitID]);//wont
-								// work - no valid hitID
-								h1avgWire4Dar[SL - 1][layer - 1][gSegmThBin[segmentID]][1]
-										.fill(gSegmAvgWire[segmentID]);
-								h1fitChisqProbSeg4Dar[SL - 1][layer - 1][gSegmThBin[segmentID]][1]
-										.fill(gFitChisqProb[segmentID]);
-							}
-						}
-						/*
-						 * Now, looking at more associated info stored in a
-						 * particular entry of another bank based on the value
-						 * of segmentID. Unlike the hits related banks, these
-						 * banks will have less # of entries. For example there
-						 * could be just one or two clusters, segments, or
-						 * tracks.
-						 */
-
-						if (debug == -2 && gSegmThBin[segmentID] == 4) { // To
-																			// identify
-																			// and
-																			// look
-																			// in
-																			// CED
-																			// some
-																			// events
-																			// that
-																			// give
-																			// rise
-																			// to
-																			// spikes
-							boolean atSpike = false;
-							// Spike positions at odd layers: 0.3697 in SL=1,
-							// 0.3944 in SL=2
-							// Spike positions at even layers: -02993 in SL=1,
-							// -0.3057 in SL=2
-							if (SL == 1 && (layer % 2 == 1) && (trkDoca > 0.36 && trkDoca < 0.37))
-								atSpike = true; // For odd layers 1, 3, 5
-							if (SL == 2 && (layer % 2 == 1) && (trkDoca > 0.39 && trkDoca < 0.40))
-								atSpike = true;
-							if (SL == 1 && (layer % 2 == 0) && (trkDoca > -0.30 && trkDoca < -0.29))
-								atSpike = true; // For even layers 2,4,6
-							if (SL == 2 && (layer % 2 == 0) && (trkDoca > -0.31 && trkDoca < -0.299))
-								atSpike = true;
-							if (atSpike == true) {
-								printIt = String.format("Spikes: %d,%d,%d,%d,%d,%d,  %.3f", counter, sector, superlayer,
-										layer, segmentID, matchedHitID, trkDoca);
-								System.out.println(printIt);
-							}
-						}
-
-						// if(debug>-1)
-						// System.out.println(i+","+sector+","+superlayer+","+layer+","+segmentID+","+matchedHitID);
-						if (debug > -1) {
-							printIt = String.format("%d,%d,%d,%d,%d,%d,  %.3f", i, sector, superlayer, layer, segmentID,
-									matchedHitID, trkDoca);
-							System.out.println(printIt);
-						}
-
-						// docaMax = 2.0*wpdist[superlayer-1]; docaNorm =
-						// trkDoca/docaMax;
 					}
 				}
 			} else
@@ -1034,7 +559,7 @@ public class ReadRecDataForMinuit implements ActionListener {
 		// c0.draw(h2timeVtrkDoca[1][1]);
 		// c0.cd(2); c0.draw(h2timeVtrkDoca[0][0]); c0.cd(3);
 		// c0.draw(h2timeVtrkDoca[0][1]);
-		imgNm = "/Volumes/Mac_Storage/Work_Codes/GIT_HUB/DC_Calibration/src/images/timeVsTrkDoca_and_Profiles.png";
+		imgNm = "src/images/timeVsTrkDoca_and_Profiles.png";
 		System.out.println("#################################################");
 		System.out.println("#################################################");
 
@@ -1061,7 +586,7 @@ public class ReadRecDataForMinuit implements ActionListener {
 		c01.draw(h2timeVtrkDoca[0][0]);
 		c01.cd(1);
 		c01.draw(profileX[0][0]);
-		imgNm = "/Volumes/Mac_Storage/Work_Codes/GIT_HUB/DC_Calibration/src/images/timeVsTrkDoca_and_Profiles2.png";
+		imgNm = "src/images/timeVsTrkDoca_and_Profiles2.png";
 		c01.save(imgNm);
 
 		// TCanvas c03 = new TCanvas("c03","trkDoca/docaMax in Different #theta
@@ -1070,41 +595,76 @@ public class ReadRecDataForMinuit implements ActionListener {
 		c03.setSize(4 * 400, nThBinsVz * 400);
 		c03.divide(4, nThBinsVz);
 
-		GraphErrors[][] profileXvz = new GraphErrors[nSL][nThBinsVz];
-		for (int i = 0; i < nSL; i++) {
-			for (int j = 0; j < nThBinsVz; j++) {
-				profileXvz[i][j] = h2timeVtrkDocaVZ[i][j].getProfileX();
+		GraphErrors[][][] profileXvz = new GraphErrors[nSectors][nSL][nThBinsVz];
+		for (int i = 0; i < nSectors; i++) {
+                    for (int j = 0; j < nSL; j++) {
+			for (int k = 0; k < nThBinsVz; k++) {
+				profileXvz[i][j][k] = h2timeVtrkDocaVZ[i][j][k].getProfileX();
 				// profileXvz[i][j] = h2timeVtrkDocaVZ[i][j].getProfileY();
 			}
 		}
+                }
 
+            for (int j = 0; j < nThBinsVz; j++) { // Row #
+                c03.cd(j * 4 + 0); //System.out.println("debug nTh: 0 j=" + j);
+                if (profileXvz[0][0][j].getDataSize(0) > 0) {
+                    c03.draw(h2timeVtrkDocaVZ[0][0][j]); // c0.draw(profileX[i][j],"same");
+                }
+                c03.cd(j * 4 + 1); //System.out.println("debug nTh: 1 j=" + j);
+                if (profileXvz[0][1][j].getDataSize(0) > 0) {
+                    c03.draw(h2timeVtrkDocaVZ[0][1][j]); // c0.draw(profileX[i][j],"same");
+                }
+                c03.cd(j * 4 + 2); //System.out.println("debug nTh: 2 j=" + j);
+                System.out.println("0 j=" + j + "profile size = " + profileXvz[0][0][j].getDataSize(0));
+                if (profileXvz[0][0][j].getDataSize(0) > 0) {
+                    c03.draw(profileXvz[0][0][j]);
+                }
+                c03.cd(j * 4 + 3); //System.out.println("debug nTh: 3 j=" + j);
+                System.out.println("1 j=" + j + "profile size = " + profileXvz[0][1][j].getDataSize(0));
+                if (profileXvz[0][1][j].getDataSize(0) > 0) {
+                    c03.draw(profileXvz[0][1][j]);
+                }
+            }
+		imgNm = "src/images/timeVsTrkDoca_and_ProfilesVZ.png";
+		c03.save(imgNm); System.out.println(imgNm + " created.");
+                
+               
+            //EmbeddedCanvas c03s = new EmbeddedCanvas(); 
+            //c03s.setSize(nSL * 400, nThBinsVz * 400); c03s.divide(nSL, nThBinsVz);
+            for (int i = 0; i < nSectors; i++) { //Plot #
+                EmbeddedCanvas c03s = new EmbeddedCanvas(); //Can do it in java due to automatic garbase collection feauture of java
+                c03s.setSize(nSL * 500, nThBinsVz * 500); c03s.divide(nSL, nThBinsVz);
+                
+                for (int j = 0; j < nSL; j++) { //Column #
+                    for (int k = 0; k < nThBinsVz; k++) { // Row #            
+                        c03s.cd(j * nSL + k); //System.out.println("debug nTh: 0 j=" + j);
+                        System.out.println("sec=" + i + " sl=" + j + " thBin=" + k + " profile size = " + profileXvz[i][j][k].getDataSize(0));
+                        if (profileXvz[i][j][k].getDataSize(0) > 0) {
+                            c03s.draw(h2timeVtrkDocaVZ[i][j][k]); // c0.draw(profileX[i][j],"same");
+                        }
+                        hTtl = "Sec="+ (i + 1) + " SL=" + (j+1) + " theta=("+ thEdgeVzL[k] + "," + thEdgeVzH[k]+")"; 
+                        c03s.getPad(j * nSL + k).setTitle(hTtl); //title assigned to the histogram didn't show up in the canvas/pad
+                    }
+                }
+                imgNm = "src/images/timeVsTrkDoca_and_ProfilesVZsector" + i + ".png";
+                c03s.save(imgNm);                System.out.println(imgNm + " created.");
+            }
+                
+                
+                
+                /*
 		// Now start minimization
 		KrishnaFcn theFCN = new KrishnaFcn(nSupLayers, nThBinsVz, profileXvz);
-		MnUserParameters upar = new MnUserParameters();
-		// parNames[] = {v0,deltamn,tmax1,tmax2,distbeta};
-		// double parSteps[] = {0.00001 , 0.01 , 0.001, 0.01, 0.0001};
+		MnUserParameters upar = new MnUserParameters();		
 		double parSteps[] = { 0.00001, 0.001, 0.01, 0.01, 0.0001 };
-		// double pLow[] = {prevFitPars[0]*0.6, prevFitPars[1]*0.6,
-		// prevFitPars[2]*0.5, prevFitPars[3]*0.6, prevFitPars[4]*0.0};
-		// double pHigh[] = {prevFitPars[0]*1.3, prevFitPars[1]*1.3,
-		// prevFitPars[2]*1.5, prevFitPars[3]*1.3, prevFitPars[4]*1.5};
+		
 		double pLow[] = { prevFitPars[0] * 0.4, prevFitPars[1] * 0.0, prevFitPars[2] * 0.4, prevFitPars[3] * 0.4,
 				prevFitPars[4] * 0.0 };
 		double pHigh[] = { prevFitPars[0] * 1.6, prevFitPars[1] * 5.0, prevFitPars[2] * 1.6, prevFitPars[3] * 1.6,
 				prevFitPars[4] * 1.6 };
 
 		// upar.add("p0", 1.0, 0.1); upar.add("p1", 1.5, 0.1);
-		for (int p = 0; p < nFreePars; p++) {
-			/*
-			 * upar.add(parName[p],prevFitPars[p],parSteps[p]); //Works
-			 * //http://java.freehep.org/freehep-jminuit/apidocs/index-all.html
-			 * // setLimits(int i, double low, double up)
-			 * //http://java.freehep.org/freehep-jminuit/apidocs/org/freehep/
-			 * math/minuit/package-summary.html
-			 * upar.setLimits(p,pLow[p],pHigh[p]); //Works
-			 */
-			// Instead of above add() and setLimits(), I can use the following
-			// add() to do the job for both
+		for (int p = 0; p < nFreePars; p++) {			
 			upar.add(parName[p], prevFitPars[p], parSteps[p], pLow[p], pHigh[p]);
 		}
 
@@ -1118,7 +678,6 @@ public class ReadRecDataForMinuit implements ActionListener {
 		// ===============
 
 		System.out.println("Initial parameters: " + upar);
-
 		System.out.println("start migrad");
 		MnMigrad migrad = new MnMigrad(theFCN, upar);
 		FunctionMinimum min = migrad.minimize();
@@ -1137,12 +696,6 @@ public class ReadRecDataForMinuit implements ActionListener {
 
 		MnUserParameters userpar = min.userParameters();
 
-		// System.out.println("par0 = " + userpar.value("p0") + " +/-
-		// " +
-		// userpar.error("p0"));
-		// System.out.println("par1 = " + userpar.value("p1") + " +/-
-		// " +
-		// userpar.error("p1"));
 		for (int p = 0; p < nFreePars; p++)
 			System.out.println(parName[p] + " = " + userpar.value(parName[p]) + " +/- " + userpar.error(parName[p]));
 		double[] fPars = new double[nFreePars], fErrs = new double[nFreePars];
@@ -1166,25 +719,14 @@ public class ReadRecDataForMinuit implements ActionListener {
 		System.out.println(
 				"kp:========================== Just checking if the limits are coming out as the final values.");
 
-		for (int j = 0; j < nThBinsVz; j++) { // Row #
-			c03.cd(j * 4 + 0);
-			c03.draw(h2timeVtrkDocaVZ[0][j]); // c0.draw(profileX[i][j],"same");
-			c03.cd(j * 4 + 1);
-			c03.draw(h2timeVtrkDocaVZ[1][j]); // c0.draw(profileX[i][j],"same");
-			c03.cd(j * 4 + 2);
-			c03.draw(profileXvz[0][j]);
-			c03.cd(j * 4 + 3);
-			c03.draw(profileXvz[1][j]);
-		}
-		imgNm = "/Volumes/Mac_Storage/Work_Codes/GIT_HUB/DC_Calibration/src/images/timeVsTrkDoca_and_ProfilesVZ.png";
-		c03.save(imgNm);
+
 
 		for (int i = 0; i < 5; i++)
 			pars4FitLine[i] = fPars[i];
 		pars4FitLine[5] = 1.0;
 		pars4FitLine[6] = 0.0;
 		pars4FitLine[7] = 0.3861;
-
+                
 		System.out.println("debug0 ..");
 		calibFnToDraw_withGROOT[][] myFitLinesGroot = new calibFnToDraw_withGROOT[2][nThBinsVz];
 		System.out.println("debug1 ..");
@@ -1209,7 +751,7 @@ public class ReadRecDataForMinuit implements ActionListener {
 			}
 		}
 		System.out.println("debug2 ..");
-
+               
 		// TCanvas c06 = new TCanvas("c06","time-to-distance
 		// fits",1600,2400,4,6);
 		// TCanvas c06 = new TCanvas("c06","time-to-distance
@@ -1231,7 +773,7 @@ public class ReadRecDataForMinuit implements ActionListener {
 			c06.draw(profileXvz[1][j]);
 			c06.draw(myFitLinesGroot[1][j], "same");
 		}
-		imgNm = "/Volumes/Mac_Storage/Work_Codes/GIT_HUB/DC_Calibration/src/images/myTestFitFunctionAllThBins_wdGroot.png";
+		imgNm = "src/images/myTestFitFunctionAllThBins_wdGroot.png";
 		c06.save(imgNm);
 
 		// 10/4/16: Trying to make plot of residuals for each superlayer
@@ -1245,7 +787,11 @@ public class ReadRecDataForMinuit implements ActionListener {
 		for (int i = 0; i < nSL; i++) {
 			for (int j = 0; j < nThBinsVz; j++) {
 			}
-		}
+		}          
+               */ 
+                        
+                        
+                        
 	}// End of
 		// ProcessData()
 
@@ -1256,6 +802,8 @@ public class ReadRecDataForMinuit implements ActionListener {
 		output.append(Text);
 		output.close();
 	}
+
+
 
 	//
 	// Will have profile histograms of time-vs-doca distributions in 6 different
@@ -1454,13 +1002,7 @@ public class ReadRecDataForMinuit implements ActionListener {
 			// for(int i=0; i<profileX[0][0].getDataSize(); i++) //getDataSize()
 			// valid only for coatjava2.4 plotting packag
 			for (int i = 0; i < profileX[0][0].getDataSize(0); i++) {
-				/*
-				 * System.out.println("i X(i) ErrorX(i)  Y(i) ErrorY(i): " + i +
-				 * " " + profileX[0][0].getDataX(i) + " " +
-				 * profileX[0][0].getErrorX(i) + " " +
-				 * profileX[0][0].getDataY(i) + " " +
-				 * profileX[0][0].getErrorY(i));
-				 */ // valid only for coatjava2.4 plotting packag
+				
 				System.out.println("i X(i) ErrorX(i)  Y(i) ErrorY(i): " + i + " " + profileX[0][0].getDataX(i) + " "
 						+ profileX[0][0].getDataEX(i) + " " + profileX[0][0].getDataY(i) + " "
 						+ profileX[0][0].getDataEY(i));
@@ -1471,10 +1013,15 @@ public class ReadRecDataForMinuit implements ActionListener {
 		private int nSL, nThBinsVZ;
 		private GraphErrors[][] profileX;
 	}
-	// }
-	// public static void System.out.println(String str)
-	// {System.out.println(str);}
-	// public static void System.out.print(String str)
-	// {System.out.print(str);}
+
+    @Override
+    public void run() {
+        try {
+            //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+            processData();
+        } catch (IOException ex) {
+            Logger.getLogger(ReadRecDataForMinuitNewFileOldWay.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
 
 }

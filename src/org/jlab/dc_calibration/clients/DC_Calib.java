@@ -56,6 +56,7 @@ import javax.swing.text.DefaultCaret;
 import javax.swing.text.DefaultEditorKit;
 import javax.swing.text.JTextComponent;
 import javax.swing.text.TextAction;
+import org.jlab.dc_calibration.ReadRecDataForMinuitNewFileOldWay;
 
 import org.jlab.dc_calibration.domain.OrderOfAction;
 import org.jlab.dc_calibration.domain.TimeToDistanceFitter;
@@ -390,6 +391,7 @@ public class DC_Calib extends WindowAdapter implements WindowListener, ActionLis
 					}
 					
                                         TimeToDistanceFitter e3 = new TimeToDistanceFitter(OA, fileArray, isLinearFit);
+                                        //ReadRecDataForMinuitNewFileOldWay e3 = new ReadRecDataForMinuitNewFileOldWay(OA, fileArray, isLinearFit);
 					bTimeToDistance.addActionListener(ee -> {
 						new Thread(e3).start();
 					});

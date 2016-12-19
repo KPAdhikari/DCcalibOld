@@ -31,7 +31,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 
-import org.jlab.dc_calibration.ReadRecDataForMinuit;
+import org.jlab.dc_calibration.ReadRecDataForMinuitNewFileOldWay;
 import org.jlab.dc_calibration.ReadRecDataIn;
 import org.jlab.dc_calibration.TestEvent;
 
