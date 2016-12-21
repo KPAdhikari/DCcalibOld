@@ -113,9 +113,9 @@ public class DC_Calib extends WindowAdapter implements WindowListener, ActionLis
 
 		Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 		
-                frameSize = new Dimension((int) (screenSize.width / 1.25), (int) (screenSize.height / 1.5));
+                //frameSize = new Dimension((int) (screenSize.width / 1.25), (int) (screenSize.height / 1.5));
                 //kp: a quick temp. fix for missing button issue in my dual monitor mode
-                //frameSize = new Dimension((int) (screenSize.width / 2.5), (int) (screenSize.height / 2.0));
+                frameSize = new Dimension((int) (screenSize.width / 2.5), (int) (screenSize.height / 2.0));
                 
                 
 		int x = (int) (frameSize.width / 2);

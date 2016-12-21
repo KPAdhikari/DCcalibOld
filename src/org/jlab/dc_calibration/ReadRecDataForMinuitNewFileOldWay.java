@@ -60,12 +60,16 @@ public class ReadRecDataForMinuitNewFileOldWay implements Runnable{
 
 	// Global variables accessible from other classes as well
         public static final int nSectors = 6;
-	public static final int nSuplayers = 6;
-	public static final int nThBinsVz = 6; // [nThBinsVZ][2]
+	public static final int nSuplayers = 6;	
 	// double thEdgeVz[][] = { {-2.0, 2.0}, {8.0, 12.0}, {18.0, 22.0}, {28.0,
 	// 32.0}, {38.0, 42.0}, {48.0, 52.0}};
-	public static final double[] thEdgeVzL = { -2.0, 8.0, 18.0, 28.0, 38.0, 48.0 };
-	public static final double[] thEdgeVzH = { 2.0, 12.0, 22.0, 32.0, 42.0, 52.0 };
+        ///public static final int nThBinsVz = 6; // [nThBinsVZ][2]
+	///public static final double[] thEdgeVzL = { -2.0, 8.0, 18.0, 28.0, 38.0, 48.0 };
+	///public static final double[] thEdgeVzH = { 2.0, 12.0, 22.0, 32.0, 42.0, 52.0 };
+	protected static final int nThBinsVz = 11; // [nThBinsVZ][2]
+	protected static final double[] thEdgeVzL = { -2.0, 2.0, 8.0, 12.0, 18.0, 22.0, 28.0, 32.0, 38.0, 42.0, 48.0 };
+	protected static final double[] thEdgeVzH = { 2.0, 8.0, 12.0, 18.0, 22.0, 28.0, 32.0, 38.0, 42.0, 48.0, 52.0 };
+        
 	public static final double[] wpdist = { 0.3861, 0.4042, 0.6219, 0.6586, 0.9351, 0.9780 };
         protected static final double timeAxisMax[] = {180.0, 200.0, 320.0, 340.0, 550.0, 580.0};
 	public static final double rad2deg = 180.0 / Math.PI;
@@ -228,31 +232,40 @@ public class ReadRecDataForMinuitNewFileOldWay implements Runnable{
 		}
 
 		// =============== new Idea from Will Phelps =====
-		H2F[][] h2timeVtrkDoca = new H2F[nSL][2]; // 2 for 2 theta bins 0, 30
+		H2F[][] h2timeVtrkDoca2ThBin = new H2F[nSL][2]; // 2 for 2 theta bins 0, 30
 		int[] thetaBins = { 0, 30 };// as int[];
 		for (int i = 0; i < nSL; i++) {
 			for (int j = 0; j < 2; j++) { // 2 theta bins +/-1 deg around 0 and
 											// 30 deg
 				hNm = String.format("timeVtrkDocaS%dTh%02d", i, j);
-				h2timeVtrkDoca[i][j] = new H2F(hNm, 200, 0.0, 1.0, 150, 0.0, 200.0);
+				//h2timeVtrkDoca[i][j] = new H2F(hNm, 200, 0.0, 1.0, 150, 0.0, 200.0);
+				h2timeVtrkDoca2ThBin[i][j] = new H2F(hNm, 200, 0.0, 3.0*wpdist[i], 150, 0.0, timeAxisMax[i]);
 				hTtl = String.format("time vs |trkDoca| (SL=%d, th=%02d+/-1.0)", i + 1, thetaBins[j]);
-				h2timeVtrkDoca[i][j].setTitle(hTtl); // h2timeVtrkDoca[i][j].setMarkerColor(2);
+				h2timeVtrkDoca2ThBin[i][j].setTitle(hTtl); // h2timeVtrkDoca[i][j].setMarkerColor(2);
 			}
 		}
 
 	
-		H2F[][][] h2timeVtrkDocaVZ = new H2F[nSectors][nSL][nThBinsVz]; // 2 for 2 theta bins 0, 30
+		H2F[][][] h2timeVtrkDoca = new H2F[nSectors][nSL][nThBinsVz]; // vs trkDoca
+		H2F[][][] h2timeVtrkDocaVZ = new H2F[nSectors][nSL][nThBinsVz]; // vs trkDoca/docaMax
 		for (int i = 0; i < nSectors; i++) {
                     for (int j = 0; j < nSL; j++) {
 			for (int k = 0; k < nThBinsVz; k++) { // nThBinsVZ theta bins +/-2 deg around 0, 10, 20, 30, 40, and 50 degs
-				hNm = String.format("timeVtrkDocaS%dSL%dTh%02d", i, j, k);
+				hNm = String.format("timeVtrkDocaVZS%dSL%dTh%02d", i, j, k);
 				h2timeVtrkDocaVZ[i][j][k] = new H2F(hNm, 200, 0.0, 1.0, 150, 0.0, timeAxisMax[j]);//200.0);
 				//hTtl = String.format("time vs |trkDoca| (S=%d,SL=%d, th(%2.1f,%2.1f))", i + 1, j+1, thEdgeVzL[k], thEdgeVzH[k]); // Worked
                                 hTtl = "Sec="+ (i + 1) + ", SL=" + (j+1) + ", theta=("+ thEdgeVzL[k] + "," + thEdgeVzH[k]+")"; 
 				// hTtl = String.format("time vs |trkDoca| (SL=%d, th(%2.1f,%2.1f))",i+1,thEdgeVz[0][j],thEdgeVz[1][j]); //Didn't work
 				h2timeVtrkDocaVZ[i][j][k].setTitle(hTtl); // h2timeVtrkDoca[i][j].setMarkerColor(2);
                                 h2timeVtrkDocaVZ[i][j][k].setTitleX("doca/docaMax");
-                                h2timeVtrkDocaVZ[i][j][k].setTitleY("time");
+                                h2timeVtrkDocaVZ[i][j][k].setTitleY("time (ns)");
+                                
+                                hNm = String.format("timeVtrkDocaS%dSL%dTh%02d", i, j, k);
+				h2timeVtrkDoca[i][j][k] = new H2F(hNm, 200, 0.0, 2.3*wpdist[j], 150, 0.0, timeAxisMax[j]);
+                                hTtl = "Sec="+ (i + 1) + ", SL=" + (j+1) + ", theta=("+ thEdgeVzL[k] + "," + thEdgeVzH[k]+")"; 				// hTtl = String.format("time vs |trkDoca| (SL=%d, th(%2.1f,%2.1f))",i+1,thEdgeVz[0][j],thEdgeVz[1][j]); //Didn't work
+				h2timeVtrkDoca[i][j][k].setTitle(hTtl); 
+                                h2timeVtrkDoca[i][j][k].setTitleX("trkDoca (cm)");
+                                h2timeVtrkDoca[i][j][k].setTitleY("time (ns)");
 			}
                     }
                 }
@@ -502,9 +515,9 @@ public class ReadRecDataForMinuitNewFileOldWay implements Runnable{
 								if (hitID[h] > -1 && thBn > -1 && thBn < nTh)
 									h1timeSlTh[superlayer - 1][thBn].fill(gTime[hitID[h]]);
 								if (abs(thTmp1) < 1.0 && hitID[h] > -1)
-									h2timeVtrkDoca[superlayer - 1][0].fill(abs(gTrkDoca[hitID[h]]), gTime[hitID[h]]);
+									h2timeVtrkDoca2ThBin[superlayer - 1][0].fill(abs(gTrkDoca[hitID[h]]), gTime[hitID[h]]);
 								if (abs(thTmp2) < 1.0 && hitID[h] > -1)
-									h2timeVtrkDoca[superlayer - 1][1].fill(abs(gTrkDoca[hitID[h]]), gTime[hitID[h]]);
+									h2timeVtrkDoca2ThBin[superlayer - 1][1].fill(abs(gTrkDoca[hitID[h]]), gTime[hitID[h]]);
 
 								if (hitID[h] > -1 && thBnVz > -1 && thBnVz < nThBinsVz) {
 									docaNorm = gTrkDoca[hitID[h]] / docaMax;
@@ -513,6 +526,7 @@ public class ReadRecDataForMinuitNewFileOldWay implements Runnable{
 									// if(deltaVal<50.0){ //11/10/16
 									// h2timeVtrkDocaVZ[superlayer-1][thBnVz].fill(abs(gTrkDoca[hitID[h]]),gTime[hitID[h]]);
 									h2timeVtrkDocaVZ[sector-1][superlayer - 1][thBnVz].fill(abs(docaNorm), gTime[hitID[h]]);
+                                                                        h2timeVtrkDoca[sector-1][superlayer - 1][thBnVz].fill(abs(gTrkDoca[hitID[h]]), gTime[hitID[h]]);
 									// } //11/10/16
 								}								
 							}
@@ -545,10 +559,10 @@ public class ReadRecDataForMinuitNewFileOldWay implements Runnable{
 		for (int i = 0; i < nSL; i++) {
 			for (int j = 0; j < 2; j++) { // 2 thet bins +/-1 deg around 0 and
 											// 30 deg
-				profileX[i][j] = h2timeVtrkDoca[i][j].getProfileX();
-				profileY[i][j] = h2timeVtrkDoca[i][j].getProfileY();
+				profileX[i][j] = h2timeVtrkDoca2ThBin[i][j].getProfileX();
+				profileY[i][j] = h2timeVtrkDoca2ThBin[i][j].getProfileY();
 				c0.cd(i * 2 + j);
-				c0.draw(h2timeVtrkDoca[i][j]); // c0.draw(profileX[i][j],"same");
+				c0.draw(h2timeVtrkDoca2ThBin[i][j]); // c0.draw(profileX[i][j],"same");
 				c0.cd(i * 2 + j + 4);
 				c0.draw(profileX[i][j]); // c0.draw(h2timeVtrkDoca[i][j]);
 				c0.cd(i * 2 + j + 8);
@@ -583,7 +597,7 @@ public class ReadRecDataForMinuitNewFileOldWay implements Runnable{
 		c01.setSize(3 * 400, 2 * 400);
 		c01.divide(1, 2);
 		c01.cd(0);
-		c01.draw(h2timeVtrkDoca[0][0]);
+		c01.draw(h2timeVtrkDoca2ThBin[0][0]);
 		c01.cd(1);
 		c01.draw(profileX[0][0]);
 		imgNm = "src/images/timeVsTrkDoca_and_Profiles2.png";
@@ -633,21 +647,38 @@ public class ReadRecDataForMinuitNewFileOldWay implements Runnable{
             //c03s.setSize(nSL * 400, nThBinsVz * 400); c03s.divide(nSL, nThBinsVz);
             for (int i = 0; i < nSectors; i++) { //Plot #
                 EmbeddedCanvas c03s = new EmbeddedCanvas(); //Can do it in java due to automatic garbase collection feauture of java
-                c03s.setSize(nSL * 500, nThBinsVz * 500); c03s.divide(nSL, nThBinsVz);
+                c03s.setSize(nThBinsVz * 500, nSL * 500); c03s.divide(nThBinsVz, nSL);               
                 
                 for (int j = 0; j < nSL; j++) { //Column #
                     for (int k = 0; k < nThBinsVz; k++) { // Row #            
-                        c03s.cd(j * nSL + k); //System.out.println("debug nTh: 0 j=" + j);
+                        c03s.cd(j * nThBinsVz + k); //System.out.println("debug nTh: 0 j=" + j);
                         System.out.println("sec=" + i + " sl=" + j + " thBin=" + k + " profile size = " + profileXvz[i][j][k].getDataSize(0));
                         if (profileXvz[i][j][k].getDataSize(0) > 0) {
-                            c03s.draw(h2timeVtrkDocaVZ[i][j][k]); // c0.draw(profileX[i][j],"same");
+                            c03s.draw(h2timeVtrkDocaVZ[i][j][k]); // c0.draw(profileX[i][j],"same");                            
                         }
                         hTtl = "Sec="+ (i + 1) + " SL=" + (j+1) + " theta=("+ thEdgeVzL[k] + "," + thEdgeVzH[k]+")"; 
-                        c03s.getPad(j * nSL + k).setTitle(hTtl); //title assigned to the histogram didn't show up in the canvas/pad
+                        c03s.getPad(j * nThBinsVz + k).setTitle(hTtl); //title assigned to the histogram didn't show up in the canvas/pad
                     }
                 }
                 imgNm = "src/images/timeVsTrkDoca_and_ProfilesVZsector" + i + ".png";
                 c03s.save(imgNm);                System.out.println(imgNm + " created.");
+                
+                
+                //======= Now drawing the histos for pure trkDoca rather than trkDoca/docaMax
+                EmbeddedCanvas c04s = new EmbeddedCanvas();
+                c04s.setSize(nThBinsVz * 500, nSL * 500); c04s.divide(nThBinsVz, nSL);
+                                for (int j = 0; j < nSL; j++) { //Column #
+                    for (int k = 0; k < nThBinsVz; k++) { // Row # 
+                        c04s.cd(j * nThBinsVz + k); //System.out.println("debug nTh: 0 j=" + j);
+                        if (profileXvz[i][j][k].getDataSize(0) > 0) { //I am using the profile of normalized histograms here.
+                            c04s.draw(h2timeVtrkDoca[i][j][k]);                         
+                        }   
+                        hTtl = "Sec="+ (i + 1) + " SL=" + (j+1) + " theta=("+ thEdgeVzL[k] + "," + thEdgeVzH[k]+")"; 
+                        c04s.getPad(j * nThBinsVz + k).setTitle(hTtl); //title assigned to the histogram didn't show up in the canvas/pad
+                    }
+                }
+                imgNm = "src/images/timeVsTrkDoca_and_ProfilesSector" + i + ".png";
+                c04s.save(imgNm);                System.out.println(imgNm + " created.");
             }
                 
                 

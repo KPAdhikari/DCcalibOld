@@ -44,6 +44,7 @@ import org.jlab.groot.base.TStyle;
 import org.jlab.groot.data.GraphErrors;
 import org.jlab.groot.data.H1F;
 import org.jlab.groot.data.H2F;
+import org.jlab.groot.math.F1D;
 import org.jlab.groot.graphics.EmbeddedCanvas;
 import org.jlab.io.evio.EvioDataBank;
 import org.jlab.io.evio.EvioDataChain;
@@ -71,6 +72,7 @@ public class TimeToDistanceFitter implements ActionListener, Runnable {
     private Map<Coordinate, H1F> h1fitChisqProbSeg4Dar = new HashMap<Coordinate, H1F>();
     private Map<Coordinate, H2F> h2timeVtrkDoca = new HashMap<Coordinate, H2F>();
     private Map<Coordinate, H2F> h2timeVtrkDocaVZ = new HashMap<Coordinate, H2F>();
+    private Map<Coordinate, H2F> h2timeVtrkDoca2 = new HashMap<Coordinate, H2F>();
 
     private Map<Integer, Integer> layerMapTBHits;
     private Map<Integer, Integer> wireMapTBHits;
@@ -92,6 +94,14 @@ public class TimeToDistanceFitter implements ActionListener, Runnable {
     private EmbeddedCanvas sector5;
     private EmbeddedCanvas sector6;
 
+    private EmbeddedCanvas sector1n;
+    private EmbeddedCanvas sector2n;
+    private EmbeddedCanvas sector3n;
+    private EmbeddedCanvas sector4n;
+    private EmbeddedCanvas sector5n;
+    private EmbeddedCanvas sector6n;
+    
+    
     private GraphErrors[][] profileX;
     private GraphErrors[][][] profileXvz;
     private GraphErrors[][] profileY;
@@ -284,12 +294,16 @@ public class TimeToDistanceFitter implements ActionListener, Runnable {
                 for (int k = 0; k < nThBinsVz; k++) { // nThBinsVz theta bins +/-2
                     // deg around 0, 10, 20, 30,
                     // 40, and 50 degs
-                    hNm = String.format("Sector %d timeVtrkDocaS%dTh%02d", i, j, k);
+                    hNm = String.format("Sector %d timeVtrkDocaVZS%dTh%02d", i, j, k);
                     //h2timeVtrkDocaVZ.put(new Coordinate(i, j, k), new H2F(hNm, 200, 0.0, 1.0, 150, 0.0, 200.0));
-                    h2timeVtrkDocaVZ.put(new Coordinate(i, j, k), new H2F(hNm, 200, 0.0, 1.0, 150, 0.0, timeAxisMax[i]));
-
-                    hTtl = String.format("time vs. Doca (SL=%d, th(%2.1f,%2.1f))", j + 1, thEdgeVzL[k], thEdgeVzH[k]); // Worked
+                    h2timeVtrkDocaVZ.put(new Coordinate(i, j, k), new H2F(hNm, 200, 0.0, 1.0, 150, 0.0, timeAxisMax[j]));
+                    hTtl = String.format("time vs. Doca (SL=%d, th(%2.1f,%2.1f))", j + 1, thEdgeVzL[k], thEdgeVzH[k]); 
                     h2timeVtrkDocaVZ.get(new Coordinate(i, j, k)).setTitle(hTtl);
+                    
+                    hNm = String.format("Sector %d timeVtrkDocaS%dTh%02d", i, j, k);                    
+                    h2timeVtrkDoca2.put(new Coordinate(i, j, k), new H2F(hNm, 200, 0.0, 2.3*wpdist[j], 150, 0.0, timeAxisMax[j]));
+                    hTtl = String.format("time vs. Doca (SL=%d, th(%2.1f,%2.1f))", j + 1, thEdgeVzL[k], thEdgeVzH[k]); 
+                    h2timeVtrkDoca2.get(new Coordinate(i, j, k)).setTitle(hTtl);
                 }
             }
         }
@@ -315,19 +329,33 @@ public class TimeToDistanceFitter implements ActionListener, Runnable {
         sector4 = new EmbeddedCanvas();
         sector5 = new EmbeddedCanvas();
         sector6 = new EmbeddedCanvas();
-
-        sector1.setSize(4 * 400, 6 * 400);
-        sector1.divide(6, 6);
-        sector2.setSize(4 * 400, 6 * 400);
-        sector2.divide(6, 6);
-        sector3.setSize(4 * 400, 6 * 400);
-        sector3.divide(6, 6);
-        sector4.setSize(4 * 400, 6 * 400);
-        sector4.divide(6, 6);
-        sector5.setSize(4 * 400, 6 * 400);
-        sector5.divide(6, 6);
-        sector6.setSize(4 * 400, 6 * 400);
-        sector6.divide(6, 6);
+/*
+        sector1.setSize(4 * 400, 6 * 400);        sector1.divide(6, 6);
+        sector2.setSize(4 * 400, 6 * 400);        sector2.divide(6, 6);
+        sector3.setSize(4 * 400, 6 * 400);        sector3.divide(6, 6);
+        sector4.setSize(4 * 400, 6 * 400);        sector4.divide(6, 6);
+        sector5.setSize(4 * 400, 6 * 400);        sector5.divide(6, 6);
+        sector6.setSize(4 * 400, 6 * 400);        sector6.divide(6, 6);
+*/
+        sector1.setSize(nThBinsVz * 400,  nSL * 400);    sector1.divide(nThBinsVz, nSL);
+        sector2.setSize(nThBinsVz * 400,  nSL * 400);    sector2.divide(nThBinsVz, nSL);
+        sector3.setSize(nThBinsVz * 400,  nSL * 400);    sector3.divide(nThBinsVz, nSL);
+        sector4.setSize(nThBinsVz * 400,  nSL * 400);    sector4.divide(nThBinsVz, nSL);
+        sector5.setSize(nThBinsVz * 400,  nSL * 400);    sector5.divide(nThBinsVz, nSL);
+        sector6.setSize(nThBinsVz * 400,  nSL * 400);    sector6.divide(nThBinsVz, nSL);
+        
+        sector1n = new EmbeddedCanvas();
+        sector2n = new EmbeddedCanvas();
+        sector3n = new EmbeddedCanvas();
+        sector4n = new EmbeddedCanvas();
+        sector5n = new EmbeddedCanvas();
+        sector6n = new EmbeddedCanvas();
+        sector1n.setSize(nThBinsVz * 400,  nSL * 400);    sector1n.divide(nThBinsVz, nSL);
+        sector2n.setSize(nThBinsVz * 400,  nSL * 400);    sector2n.divide(nThBinsVz, nSL);
+        sector3n.setSize(nThBinsVz * 400,  nSL * 400);    sector3n.divide(nThBinsVz, nSL);
+        sector4n.setSize(nThBinsVz * 400,  nSL * 400);    sector4n.divide(nThBinsVz, nSL);
+        sector5n.setSize(nThBinsVz * 400,  nSL * 400);    sector5n.divide(nThBinsVz, nSL);
+        sector6n.setSize(nThBinsVz * 400,  nSL * 400);    sector6n.divide(nThBinsVz, nSL);
     }
 
     protected void processData() {
@@ -417,7 +445,8 @@ public class TimeToDistanceFitter implements ActionListener, Runnable {
             double thTmp1 = thDeg;
             double thTmp2 = thDeg - 30.0;
             double docaMax = 2.0 * wpdist[superlayer - 1];
-            for (int h = 0; h < 12; h++) {
+            //for (int h = 0; h < 12; h++) {
+            for (int h = 1; h <= 12; h++) {
                 if (nHitsInSeg > 5)// Saving only those with more than 5 hits
                 {
                     Double gTime = timeMapTBHits.get(new Integer(bnkSegs.getInt("Hit" + h + "_ID", j)));
@@ -437,6 +466,7 @@ public class TimeToDistanceFitter implements ActionListener, Runnable {
                     if (bnkSegs.getInt("Hit" + h + "_ID", j) > -1 && thBnVz > -1 && thBnVz < nThBinsVz) {
                         double docaNorm = gTrkDoca / docaMax;
                         h2timeVtrkDocaVZ.get(new Coordinate(sector - 1, superlayer - 1, thBnVz)).fill(Math.abs(docaNorm), gTime);
+                        h2timeVtrkDoca2.get(new Coordinate(sector - 1, superlayer - 1, thBnVz)).fill(Math.abs(gTrkDoca), gTime);
                     }
                 }
             }
@@ -593,8 +623,10 @@ public class TimeToDistanceFitter implements ActionListener, Runnable {
                     //pars4FitLine[7] = 2.0 * wpdist[i];
 
                     myFitLinesGroot[i][j][k].setParameters(pars4FitLineTmp);
+                    /*
                     System.out.println("Groot f(0/0.5/1.0) = " + myFitLinesGroot[i][j][k].evaluate(0.0) + ", "
-                            + myFitLinesGroot[i][j][k].evaluate(0.5) + ", " + myFitLinesGroot[i][j][k].evaluate(1.0));
+                            + myFitLinesGroot[i][j][k].evaluate(0.5) + ", " + myFitLinesGroot[i][j][k].evaluate(1.0)); 
+                    */
 
                 }
             }
@@ -642,7 +674,37 @@ public class TimeToDistanceFitter implements ActionListener, Runnable {
                 sector6.draw(myFitLinesGroot[5][j][k], "same");
             }
         }
+        
+        F1D f1 = new F1D("f1","[p0]+[p1]*x", 0.0, 1.0); 
+        f1.setParameter(0, 0.0); f1.setParameter(1, 10.0/0.053); //0.053 um/ns - drift vel for SL=1,2
+        f1.setLineWidth(2); f1.setLineColor(6);
+        F1D f2 = new F1D("f2","[0]+[1]*x", 0.0, 1.4); 
+        f2.setParameter(0, 0.0); f2.setParameter(1, 10.0/0.026); //0.026 um/ns - drift vel for SL=3,4
+        f2.setLineWidth(2); f2.setLineColor(6);
+        F1D f3 = new F1D("f3","[pp0]+[pp1]*x", 0.0, 2.0); //y=time in ns, x=doca in cm
+        f3.setParameter(0, 0.0); f3.setParameter(1, 10.0/0.036); //0.036 um/ns - drift vel for SL=5,6
+        f3.setLineWidth(2); f3.setLineColor(6);
+        
+        canvasPlace = 0;
+        for (int j = 0; j < nSL; j++) {
+            for (int k = 0; k < nThBinsVz; k++) {
+                sector1n.cd(canvasPlace);
+                sector2n.cd(canvasPlace);
+                sector3n.cd(canvasPlace);
+                sector4n.cd(canvasPlace);
+                sector5n.cd(canvasPlace);
+                sector6n.cd(canvasPlace);
 
+                canvasPlace++;
+
+                sector1n.draw(h2timeVtrkDoca2.get(new Coordinate(0, j, k))); sector1n.draw(f1, "same");                
+                sector2n.draw(h2timeVtrkDoca2.get(new Coordinate(1, j, k))); sector2n.draw(f1, "same");
+                sector3n.draw(h2timeVtrkDoca2.get(new Coordinate(2, j, k))); sector3n.draw(f2, "same");
+                sector4n.draw(h2timeVtrkDoca2.get(new Coordinate(3, j, k))); sector4n.draw(f2, "same");
+                sector5n.draw(h2timeVtrkDoca2.get(new Coordinate(4, j, k))); sector5n.draw(f3, "same");
+                sector6n.draw(h2timeVtrkDoca2.get(new Coordinate(5, j, k))); sector6n.draw(f3, "same");
+            }
+        }
         // 10/4/16: Trying to make plot of residuals for each superlayer
         H1F[] h1Residual = new H1F[nSL];
         for (int i = 0; i < nSL; i++) {
@@ -669,18 +731,19 @@ public class TimeToDistanceFitter implements ActionListener, Runnable {
 
     protected void saveAllSectorCanvases() {
         String imgName = null;
-        imgName = "src/images/allPlotsSector1.png";
-        sector1.save(imgName);
-        imgName = "src/images/allPlotsSector2.png";
-        sector2.save(imgName);
-        imgName = "src/images/allPlotsSector3.png";
-        sector3.save(imgName);
-        imgName = "src/images/allPlotsSector4.png";
-        sector4.save(imgName);
-        imgName = "src/images/allPlotsSector5.png";
-        sector5.save(imgName);
-        imgName = "src/images/allPlotsSector6.png";
-        sector6.save(imgName);
+        imgName = "src/images/allPlotsSector1.png";        sector1.save(imgName);
+        imgName = "src/images/allPlotsSector2.png";        sector2.save(imgName);
+        imgName = "src/images/allPlotsSector3.png";        sector3.save(imgName);
+        imgName = "src/images/allPlotsSector4.png";        sector4.save(imgName);
+        imgName = "src/images/allPlotsSector5.png";        sector5.save(imgName);
+        imgName = "src/images/allPlotsSector6.png";        sector6.save(imgName);
+        
+        imgName = "src/images/allPlotsSector1n.png";       sector1n.save(imgName);
+        imgName = "src/images/allPlotsSector2n.png";       sector2n.save(imgName);
+        imgName = "src/images/allPlotsSector3n.png";       sector3n.save(imgName);
+        imgName = "src/images/allPlotsSector4n.png";       sector4n.save(imgName);
+        imgName = "src/images/allPlotsSector5n.png";       sector5n.save(imgName);
+        imgName = "src/images/allPlotsSector6n.png";       sector6n.save(imgName);        
         System.out.println("Saved the plots from each of the sectors and superlayers.");
     }
 
