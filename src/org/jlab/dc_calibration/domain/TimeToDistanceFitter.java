@@ -678,10 +678,10 @@ public class TimeToDistanceFitter implements ActionListener, Runnable {
         F1D f1 = new F1D("f1","[p0]+[p1]*x", 0.0, 1.0); 
         f1.setParameter(0, 0.0); f1.setParameter(1, 10.0/0.053); //0.053 um/ns - drift vel for SL=1,2
         f1.setLineWidth(2); f1.setLineColor(6);
-        F1D f2 = new F1D("f2","[0]+[1]*x", 0.0, 1.4); 
+        F1D f2 = new F1D("f2","[p0]+[p1]*x", 0.0, 1.4); 
         f2.setParameter(0, 0.0); f2.setParameter(1, 10.0/0.026); //0.026 um/ns - drift vel for SL=3,4
         f2.setLineWidth(2); f2.setLineColor(6);
-        F1D f3 = new F1D("f3","[pp0]+[pp1]*x", 0.0, 2.0); //y=time in ns, x=doca in cm
+        F1D f3 = new F1D("f3","[p0]+[p1]*x", 0.0, 2.0); //y=time in ns, x=doca in cm
         f3.setParameter(0, 0.0); f3.setParameter(1, 10.0/0.036); //0.036 um/ns - drift vel for SL=5,6
         f3.setLineWidth(2); f3.setLineColor(6);
         
