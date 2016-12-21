@@ -23,9 +23,12 @@ public final class Constants {
 	//protected static final int nThBinsVz = 6; // [nThBinsVZ][2]
 	//protected static final double[] thEdgeVzL = { -2.0, 8.0, 18.0, 28.0, 38.0, 48.0 };
 	//protected static final double[] thEdgeVzH = { 2.0, 12.0, 22.0, 32.0, 42.0, 52.0 };
+	//protected static final int nThBinsVz = 11; // [nThBinsVZ][2]
+	//protected static final double[] thEdgeVzL = { -2.0, 2.0, 8.0, 12.0, 18.0, 22.0, 28.0, 32.0, 38.0, 42.0, 48.0 };
+	//protected static final double[] thEdgeVzH = { 2.0, 8.0, 12.0, 18.0, 22.0, 28.0, 32.0, 38.0, 42.0, 48.0, 52.0 };
 	protected static final int nThBinsVz = 11; // [nThBinsVZ][2]
-	protected static final double[] thEdgeVzL = { -2.0, 2.0, 8.0, 12.0, 18.0, 22.0, 28.0, 32.0, 38.0, 42.0, 48.0 };
-	protected static final double[] thEdgeVzH = { 2.0, 8.0, 12.0, 18.0, 22.0, 28.0, 32.0, 38.0, 42.0, 48.0, 52.0 };
+	protected static final double[] thEdgeVzL = { -55.0, -45, -35.0, -25.0, -15.0, -5.0, 5.0,  15.0, 25.0, 35.0, 45.0 };
+	protected static final double[] thEdgeVzH = { -45.0, -35, -25.0, -15.0, -5.0,  5.0,  15.0, 25.0, 35.0, 45.0, 55.0 };
 	protected static final double[] wpdist = { 0.3861, 0.4042, 0.6219, 0.6586, 0.9351, 0.9780 };
 
 	protected static final int nSL = 6;

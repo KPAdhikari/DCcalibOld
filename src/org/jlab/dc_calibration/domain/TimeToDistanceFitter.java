@@ -697,12 +697,19 @@ public class TimeToDistanceFitter implements ActionListener, Runnable {
 
                 canvasPlace++;
 
-                sector1n.draw(h2timeVtrkDoca2.get(new Coordinate(0, j, k))); sector1n.draw(f1, "same");                
-                sector2n.draw(h2timeVtrkDoca2.get(new Coordinate(1, j, k))); sector2n.draw(f1, "same");
-                sector3n.draw(h2timeVtrkDoca2.get(new Coordinate(2, j, k))); sector3n.draw(f2, "same");
-                sector4n.draw(h2timeVtrkDoca2.get(new Coordinate(3, j, k))); sector4n.draw(f2, "same");
-                sector5n.draw(h2timeVtrkDoca2.get(new Coordinate(4, j, k))); sector5n.draw(f3, "same");
-                sector6n.draw(h2timeVtrkDoca2.get(new Coordinate(5, j, k))); sector6n.draw(f3, "same");
+                sector1n.draw(h2timeVtrkDoca2.get(new Coordinate(0, j, k)));                 
+                sector2n.draw(h2timeVtrkDoca2.get(new Coordinate(1, j, k))); 
+                sector3n.draw(h2timeVtrkDoca2.get(new Coordinate(2, j, k))); 
+                sector4n.draw(h2timeVtrkDoca2.get(new Coordinate(3, j, k))); 
+                sector5n.draw(h2timeVtrkDoca2.get(new Coordinate(4, j, k))); 
+                sector6n.draw(h2timeVtrkDoca2.get(new Coordinate(5, j, k))); 
+                
+                if(j<2) sector1n.draw(f1, "same"); else if(j>1 && j<4) sector1n.draw(f2, "same"); else sector1n.draw(f3, "same");
+                if(j<2) sector2n.draw(f1, "same"); else if(j>1 && j<4) sector2n.draw(f2, "same"); else sector2n.draw(f3, "same");
+                if(j<2) sector3n.draw(f1, "same"); else if(j>1 && j<4) sector3n.draw(f2, "same"); else sector3n.draw(f3, "same");
+                if(j<2) sector4n.draw(f1, "same"); else if(j>1 && j<4) sector4n.draw(f2, "same"); else sector4n.draw(f3, "same");
+                if(j<2) sector5n.draw(f1, "same"); else if(j>1 && j<4) sector5n.draw(f2, "same"); else sector5n.draw(f3, "same");
+                if(j<2) sector6n.draw(f1, "same"); else if(j>1 && j<4) sector6n.draw(f2, "same"); else sector6n.draw(f3, "same");
             }
         }
         // 10/4/16: Trying to make plot of residuals for each superlayer
