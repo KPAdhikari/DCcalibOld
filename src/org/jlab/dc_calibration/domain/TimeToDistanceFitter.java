@@ -297,12 +297,12 @@ public class TimeToDistanceFitter implements ActionListener, Runnable {
                     hNm = String.format("Sector %d timeVtrkDocaVZS%dTh%02d", i, j, k);
                     //h2timeVtrkDocaVZ.put(new Coordinate(i, j, k), new H2F(hNm, 200, 0.0, 1.0, 150, 0.0, 200.0));
                     h2timeVtrkDocaVZ.put(new Coordinate(i, j, k), new H2F(hNm, 200, 0.0, 1.0, 150, 0.0, timeAxisMax[j]));
-                    hTtl = String.format("time vs. Doca (SL=%d, th(%2.1f,%2.1f))", j + 1, thEdgeVzL[k], thEdgeVzH[k]); 
+                    hTtl = String.format("time vs. Doca (Sec=%d, SL=%d, th(%2.1f,%2.1f))", i, j + 1, thEdgeVzL[k], thEdgeVzH[k]); 
                     h2timeVtrkDocaVZ.get(new Coordinate(i, j, k)).setTitle(hTtl);
                     
                     hNm = String.format("Sector %d timeVtrkDocaS%dTh%02d", i, j, k);                    
                     h2timeVtrkDoca2.put(new Coordinate(i, j, k), new H2F(hNm, 200, 0.0, 2.3*wpdist[j], 150, 0.0, timeAxisMax[j]));
-                    hTtl = String.format("time vs. Doca (SL=%d, th(%2.1f,%2.1f))", j + 1, thEdgeVzL[k], thEdgeVzH[k]); 
+                    hTtl = String.format("time vs. Doca (Sec=%d, SL=%d, th(%2.1f,%2.1f))", i, j + 1, thEdgeVzL[k], thEdgeVzH[k]); 
                     h2timeVtrkDoca2.get(new Coordinate(i, j, k)).setTitle(hTtl);
                 }
             }
@@ -648,6 +648,8 @@ public class TimeToDistanceFitter implements ActionListener, Runnable {
         }
         imgNm = "src/images/myTestFitFunctionAllThBins_wdGroot.png";
         c06.save(imgNm);
+        
+        String Title;
         int canvasPlace = 0;
         for (int j = 0; j < nSL; j++) {
             for (int k = 0; k < nThBinsVz; k++) {
@@ -659,7 +661,15 @@ public class TimeToDistanceFitter implements ActionListener, Runnable {
                 sector6.cd(canvasPlace);
 
                 canvasPlace++;
-
+                
+                //I can replace j * * nThBinsVz + k with canvasPlace too
+                sector1.getPad(j * nThBinsVz + k).setAxisRange(0.0,1.0,0.0,timeAxisMax[j]);
+                sector2.getPad(j * nThBinsVz + k).setAxisRange(0.0,1.0,0.0,timeAxisMax[j]);
+                sector3.getPad(j * nThBinsVz + k).setAxisRange(0.0,1.0,0.0,timeAxisMax[j]);
+                sector4.getPad(j * nThBinsVz + k).setAxisRange(0.0,1.0,0.0,timeAxisMax[j]);
+                sector5.getPad(j * nThBinsVz + k).setAxisRange(0.0,1.0,0.0,timeAxisMax[j]);
+                sector6.getPad(j * nThBinsVz + k).setAxisRange(0.0,1.0,0.0,timeAxisMax[j]);
+                              
                 sector1.draw(h2timeVtrkDocaVZ.get(new Coordinate(0, j, k)));
                 sector1.draw(myFitLinesGroot[0][j][k], "same");
                 sector2.draw(h2timeVtrkDocaVZ.get(new Coordinate(1, j, k)));
@@ -672,6 +682,20 @@ public class TimeToDistanceFitter implements ActionListener, Runnable {
                 sector5.draw(myFitLinesGroot[4][j][k], "same");
                 sector6.draw(h2timeVtrkDocaVZ.get(new Coordinate(5, j, k)));
                 sector6.draw(myFitLinesGroot[5][j][k], "same");
+                
+                Title = "Sec=1, SL=" + (j+1) + " theta=("+ thEdgeVzL[k] + "," + thEdgeVzH[k]+")";  sector1.getPad(j * nThBinsVz + k).setTitle(Title);
+                Title = "Sec=2, SL=" + (j+1) + " theta=("+ thEdgeVzL[k] + "," + thEdgeVzH[k]+")";  sector2.getPad(j * nThBinsVz + k).setTitle(Title);
+                Title = "Sec=3, SL=" + (j+1) + " theta=("+ thEdgeVzL[k] + "," + thEdgeVzH[k]+")";  sector3.getPad(j * nThBinsVz + k).setTitle(Title);
+                Title = "Sec=4, SL=" + (j+1) + " theta=("+ thEdgeVzL[k] + "," + thEdgeVzH[k]+")";  sector4.getPad(j * nThBinsVz + k).setTitle(Title);
+                Title = "Sec=5, SL=" + (j+1) + " theta=("+ thEdgeVzL[k] + "," + thEdgeVzH[k]+")";  sector5.getPad(j * nThBinsVz + k).setTitle(Title);
+                Title = "Sec=6, SL=" + (j+1) + " theta=("+ thEdgeVzL[k] + "," + thEdgeVzH[k]+")";  sector6.getPad(j * nThBinsVz + k).setTitle(Title);
+                
+                sector1.setPadTitlesX("trkDoca/docaMax"); sector1.setPadTitlesY("time (ns)");
+                sector2.setPadTitlesX("trkDoca/docaMax"); sector2.setPadTitlesY("time (ns)");
+                sector3.setPadTitlesX("trkDoca/docaMax"); sector3.setPadTitlesY("time (ns)");
+                sector4.setPadTitlesX("trkDoca/docaMax"); sector4.setPadTitlesY("time (ns)");
+                sector5.setPadTitlesX("trkDoca/docaMax"); sector5.setPadTitlesY("time (ns)");
+                sector6.setPadTitlesX("trkDoca/docaMax"); sector6.setPadTitlesY("time (ns)");
             }
         }
         
@@ -685,6 +709,7 @@ public class TimeToDistanceFitter implements ActionListener, Runnable {
         f3.setParameter(0, 0.0); f3.setParameter(1, 10.0/0.036); //0.036 um/ns - drift vel for SL=5,6
         f3.setLineWidth(2); f3.setLineColor(6);
         
+       
         canvasPlace = 0;
         for (int j = 0; j < nSL; j++) {
             for (int k = 0; k < nThBinsVz; k++) {
@@ -710,6 +735,20 @@ public class TimeToDistanceFitter implements ActionListener, Runnable {
                 if(j<2) sector4n.draw(f1, "same"); else if(j>1 && j<4) sector4n.draw(f2, "same"); else sector4n.draw(f3, "same");
                 if(j<2) sector5n.draw(f1, "same"); else if(j>1 && j<4) sector5n.draw(f2, "same"); else sector5n.draw(f3, "same");
                 if(j<2) sector6n.draw(f1, "same"); else if(j>1 && j<4) sector6n.draw(f2, "same"); else sector6n.draw(f3, "same");
+                
+                Title = "Sec=1, SL=" + (j+1) + " theta=("+ thEdgeVzL[k] + "," + thEdgeVzH[k]+")";  sector1n.getPad(j * nThBinsVz + k).setTitle(Title);
+                Title = "Sec=2, SL=" + (j+1) + " theta=("+ thEdgeVzL[k] + "," + thEdgeVzH[k]+")";  sector2n.getPad(j * nThBinsVz + k).setTitle(Title);
+                Title = "Sec=3, SL=" + (j+1) + " theta=("+ thEdgeVzL[k] + "," + thEdgeVzH[k]+")";  sector3n.getPad(j * nThBinsVz + k).setTitle(Title);
+                Title = "Sec=4, SL=" + (j+1) + " theta=("+ thEdgeVzL[k] + "," + thEdgeVzH[k]+")";  sector4n.getPad(j * nThBinsVz + k).setTitle(Title);
+                Title = "Sec=5, SL=" + (j+1) + " theta=("+ thEdgeVzL[k] + "," + thEdgeVzH[k]+")";  sector5n.getPad(j * nThBinsVz + k).setTitle(Title);
+                Title = "Sec=6, SL=" + (j+1) + " theta=("+ thEdgeVzL[k] + "," + thEdgeVzH[k]+")";  sector6n.getPad(j * nThBinsVz + k).setTitle(Title);
+                
+                sector1n.setPadTitlesX("trkDoca (cm)"); sector1n.setPadTitlesY("time (ns)");
+                sector2n.setPadTitlesX("trkDoca (cm)"); sector2n.setPadTitlesY("time (ns)");
+                sector3n.setPadTitlesX("trkDoca (cm)"); sector3n.setPadTitlesY("time (ns)");
+                sector4n.setPadTitlesX("trkDoca (cm)"); sector4n.setPadTitlesY("time (ns)");
+                sector5n.setPadTitlesX("trkDoca (cm)"); sector5n.setPadTitlesY("time (ns)");
+                sector6n.setPadTitlesX("trkDoca (cm)"); sector6n.setPadTitlesY("time (ns)");
             }
         }
         // 10/4/16: Trying to make plot of residuals for each superlayer

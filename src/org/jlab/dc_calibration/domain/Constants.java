@@ -39,7 +39,7 @@ public final class Constants {
 
 	protected static final String parName[] = { "v0", "deltamn", "tmax1", "tmax2", "distbeta" };
 	protected static final double prevFitPars[] = { 62.92e-04, 1.35, 137.67, 148.02, 0.055 };
-        protected static final double timeAxisMax[] = {180.0, 200.0, 550.0, 580.0, 550.0, 580.0};
+        protected static final double timeAxisMax[] = {300.0, 300.0, 650.0, 650.0, 650.0, 650.0};
 
 	private Constants() {}
 }
